@@ -8,368 +8,1023 @@
 <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/prop-types@15.8.1/prop-types.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/recharts@2.5.0/umd/Recharts.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.0/babel.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<style>body{font-family:'Inter',system-ui,sans-serif;margin:0;padding:24px;background:#fff;}#loading{text-align:center;padding:40px;color:#888;font-size:14px;}</style>
+<style>body{font-family:'Inter',system-ui,sans-serif;margin:0;padding:24px;background:#fff;}</style>
 </head>
 <body>
-<div id="root"><div id="loading">Loading dashboard...</div></div>
+<div id="root"><div style="text-align:center;padding:40px;color:#888">Loading dashboard...</div></div>
 <script>
-// Verify all globals loaded
-window.addEventListener('error', function(e) {
-  document.getElementById('loading').innerHTML = 'Error: ' + e.message + '<br>Check browser console for details.';
-});
-if (!window.Recharts) {
-  document.getElementById('loading').innerHTML = 'Error: Recharts failed to load. Try refreshing.';
+const {
+  useState
+} = React;
+const {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ComposedChart,
+  Area
+} = Recharts;
+const TREND_DATA = [{
+  day: "Apr 15",
+  pairs: 733,
+  shipped: 1243,
+  failed: 91,
+  failPct: 12.4,
+  sla: 29,
+  c2Hrs: 1.0,
+  p3Hrs: 13.1,
+  e2eHrs: 110.7
+}, {
+  day: "Apr 16",
+  pairs: 1005,
+  shipped: 1683,
+  failed: 112,
+  failPct: 11.1,
+  sla: 97,
+  c2Hrs: 0.8,
+  p3Hrs: 14.9,
+  e2eHrs: 117.4
+}, {
+  day: "Apr 17",
+  pairs: 982,
+  shipped: 1468,
+  failed: 237,
+  failPct: 24.1,
+  sla: 311,
+  c2Hrs: 1.0,
+  p3Hrs: 55.0,
+  e2eHrs: 106.7
+}, {
+  day: "Apr 18",
+  pairs: 708,
+  shipped: 1099,
+  failed: 78,
+  failPct: 11.0,
+  sla: 100,
+  c2Hrs: 0.7,
+  p3Hrs: 32.0,
+  e2eHrs: 92.1
+}, {
+  day: "Apr 19",
+  pairs: 981,
+  shipped: 1653,
+  failed: 64,
+  failPct: 6.5,
+  sla: 6,
+  c2Hrs: 0.8,
+  p3Hrs: 14.0,
+  e2eHrs: 67.7
+}, {
+  day: "Apr 20",
+  pairs: 1232,
+  shipped: 2090,
+  failed: 142,
+  failPct: 11.5,
+  sla: 27,
+  c2Hrs: 1.0,
+  p3Hrs: 17.5,
+  e2eHrs: 64.7
+}, {
+  day: "Apr 21",
+  pairs: 1341,
+  shipped: 1849,
+  failed: 128,
+  failPct: 9.5,
+  sla: 35,
+  c2Hrs: 1.3,
+  p3Hrs: 18.8,
+  e2eHrs: 46.7
+}, {
+  day: "Apr 22",
+  pairs: 1283,
+  shipped: 1842,
+  failed: 99,
+  failPct: 7.7,
+  sla: 43,
+  c2Hrs: 1.3,
+  p3Hrs: 18.0,
+  e2eHrs: 47.9
+}, {
+  day: "Apr 23",
+  pairs: 1431,
+  shipped: 1857,
+  failed: 66,
+  failPct: 4.6,
+  sla: 0,
+  c2Hrs: 1.0,
+  p3Hrs: 18.5,
+  e2eHrs: 92.5
+}, {
+  day: "Apr 24",
+  pairs: 1301,
+  shipped: 1488,
+  failed: 260,
+  failPct: 20.0,
+  sla: 0,
+  c2Hrs: 1.1,
+  p3Hrs: 50.0,
+  e2eHrs: 88.3
+}, {
+  day: "Apr 25",
+  pairs: 1048,
+  shipped: 1140,
+  failed: 139,
+  failPct: 13.3,
+  sla: 0,
+  c2Hrs: 3.7,
+  p3Hrs: 29.5,
+  e2eHrs: 66.0
+}, {
+  day: "Apr 26",
+  pairs: 1592,
+  shipped: 1684,
+  failed: 186,
+  failPct: 11.7,
+  sla: 0,
+  c2Hrs: 4.1,
+  p3Hrs: 19.6,
+  e2eHrs: 42.9
+}, {
+  day: "Apr 27",
+  pairs: 1651,
+  shipped: 626,
+  failed: 88,
+  failPct: 5.3,
+  sla: 0,
+  c2Hrs: 2.9,
+  p3Hrs: 18.9,
+  e2eHrs: 20.4
+}, {
+  day: "Apr 28",
+  pairs: 1305,
+  shipped: 27,
+  failed: 7,
+  failPct: 0.5,
+  sla: 0,
+  c2Hrs: 1.1,
+  p3Hrs: 19.9,
+  e2eHrs: 15.9
+}];
+const FACILITY_DATA = [{
+  f: "SE_TDM",
+  v: "ws",
+  ord: 2364,
+  ship: 2383,
+  fail: 33,
+  sla: 0,
+  c2d: 0.9,
+  db: 14.9,
+  bp: 37.4,
+  ps: 0,
+  e2e: 73.6
+}, {
+  f: "SE_INK",
+  v: "ws",
+  ord: 1417,
+  ship: 2170,
+  fail: 421,
+  sla: 29,
+  c2d: 9.9,
+  db: 25.8,
+  bp: -14.5,
+  ps: 0.4,
+  e2e: 25.3
+}, {
+  f: "US_ANS",
+  v: "ws",
+  ord: 842,
+  ship: 578,
+  fail: 195,
+  sla: 0,
+  c2d: 12.4,
+  db: 19.9,
+  bp: 35.0,
+  ps: 0.1,
+  e2e: 83.2
+}, {
+  f: "GB_GOC",
+  v: "ws",
+  ord: 612,
+  ship: 501,
+  fail: 1,
+  sla: 0,
+  c2d: 8.4,
+  db: 24.9,
+  bp: 14.0,
+  ps: 0,
+  e2e: 52.2
+}, {
+  f: "US_WMS",
+  v: "ws",
+  ord: 544,
+  ship: 330,
+  fail: 7,
+  sla: 0,
+  c2d: 13.5,
+  db: 19.7,
+  bp: 21.6,
+  ps: 0,
+  e2e: 60.2
+}, {
+  f: "GB_TFI",
+  v: "ws",
+  ord: 539,
+  ship: 285,
+  fail: 6,
+  sla: 0,
+  c2d: 1.0,
+  db: 18.9,
+  bp: 10.4,
+  ps: 0,
+  e2e: 44.1
+}, {
+  f: "US_TRU",
+  v: "ws",
+  ord: 538,
+  ship: 525,
+  fail: 6,
+  sla: 0,
+  c2d: 12.3,
+  db: 19.0,
+  bp: 15.6,
+  ps: 0,
+  e2e: 55.5
+}, {
+  f: "US_PRC",
+  v: "V1",
+  ord: 525,
+  ship: 450,
+  fail: 7,
+  sla: 0,
+  c2d: 0,
+  db: 9.5,
+  bp: 19.9,
+  ps: 0,
+  e2e: 29.6
+}, {
+  f: "US_HUD",
+  v: "ws",
+  ord: 385,
+  ship: 212,
+  fail: 1,
+  sla: 0,
+  c2d: 9.2,
+  db: 17.9,
+  bp: 17.1,
+  ps: 0,
+  e2e: 59.1
+}, {
+  f: "US_PRP",
+  v: "V1",
+  ord: 381,
+  ship: 1,
+  fail: 27,
+  sla: 0,
+  c2d: 0,
+  db: 15.0,
+  bp: 37.4,
+  ps: 0,
+  e2e: 36.7
+}, {
+  f: "AU_CMP",
+  v: "ws",
+  ord: 277,
+  ship: 240,
+  fail: 44,
+  sla: 2,
+  c2d: 13.1,
+  db: 31.9,
+  bp: 27.2,
+  ps: 0,
+  e2e: 97.1
+}, {
+  f: "CA_WMS",
+  v: "ws",
+  ord: 231,
+  ship: 210,
+  fail: 2,
+  sla: 0,
+  c2d: 0.8,
+  db: 13.0,
+  bp: 40.0,
+  ps: 0,
+  e2e: 73.4
+}, {
+  f: "NO_LOS",
+  v: "ws",
+  ord: 178,
+  ship: 239,
+  fail: 6,
+  sla: 0,
+  c2d: 8.2,
+  db: 25.9,
+  bp: 11.0,
+  ps: 0,
+  e2e: 44.6
+}, {
+  f: "NL_PRM",
+  v: "ws",
+  ord: 168,
+  ship: 26,
+  fail: 35,
+  sla: 0,
+  c2d: 1.0,
+  db: 25.8,
+  bp: 11.6,
+  ps: 0,
+  e2e: 21.5
+}, {
+  f: "US_LMS",
+  v: "ws",
+  ord: 167,
+  ship: 70,
+  fail: 20,
+  sla: 0,
+  c2d: 0.7,
+  db: 9.9,
+  bp: 46.3,
+  ps: 0,
+  e2e: 68.3
+}];
+const FAIL_DATA = [{
+  stage: "After P2 deleg order in GN",
+  facility: "SE_INK",
+  count: 176,
+  hrs: 25.6
+}, {
+  stage: "After P2 deleg order in GN",
+  facility: "US_ANS",
+  count: 157,
+  hrs: 16.0
+}, {
+  stage: "After P3 batch release",
+  facility: "SE_INK",
+  count: 36,
+  hrs: 62.5
+}, {
+  stage: "After P4 partner plate",
+  facility: "AU_CMP",
+  count: 26,
+  hrs: 25.5
+}, {
+  stage: "After P2 deleg order in GN",
+  facility: "NL_PRM",
+  count: 18,
+  hrs: 10.8
+}, {
+  stage: "After P4 partner plate",
+  facility: "SE_INK",
+  count: 15,
+  hrs: 35.0
+}, {
+  stage: "After P2 deleg order in GN",
+  facility: "SE_TDM",
+  count: 15,
+  hrs: 0.9
+}, {
+  stage: "After P3 batch release",
+  facility: "US_LMS",
+  count: 8,
+  hrs: 83.4
+}, {
+  stage: "After P2 deleg order in GN",
+  facility: "US_PRP",
+  count: 8,
+  hrs: 3.9
+}, {
+  stage: "After P4 partner plate",
+  facility: "US_LMS",
+  count: 6,
+  hrs: 35.1
+}];
+function Metric({
+  label,
+  value,
+  sub,
+  warn
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "bg-gray-50 rounded-lg px-4 py-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-gray-500"
+  }, label), /*#__PURE__*/React.createElement("div", {
+    className: `text-2xl font-medium ${warn ? "text-red-600" : "text-gray-900"}`
+  }, value), sub && /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-gray-400 mt-0.5"
+  }, sub));
 }
-</script>
-<script type="text/babel">
-const { useState } = React;
-const { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart, Area } = Recharts;
-
-const TREND_DATA = [
-  { day: "Apr 15", pairs: 733, shipped: 1243, failed: 91, failPct: 12.4, sla: 29, c2Hrs: 1.0, p3Hrs: 13.1, e2eHrs: 110.7 },
-  { day: "Apr 16", pairs: 1005, shipped: 1683, failed: 112, failPct: 11.1, sla: 97, c2Hrs: 0.8, p3Hrs: 14.9, e2eHrs: 117.4 },
-  { day: "Apr 17", pairs: 982, shipped: 1468, failed: 237, failPct: 24.1, sla: 311, c2Hrs: 1.0, p3Hrs: 55.0, e2eHrs: 106.7 },
-  { day: "Apr 18", pairs: 708, shipped: 1099, failed: 78, failPct: 11.0, sla: 100, c2Hrs: 0.7, p3Hrs: 32.0, e2eHrs: 92.1 },
-  { day: "Apr 19", pairs: 981, shipped: 1653, failed: 64, failPct: 6.5, sla: 6, c2Hrs: 0.8, p3Hrs: 14.0, e2eHrs: 67.7 },
-  { day: "Apr 20", pairs: 1232, shipped: 2090, failed: 142, failPct: 11.5, sla: 27, c2Hrs: 1.0, p3Hrs: 17.5, e2eHrs: 64.7 },
-  { day: "Apr 21", pairs: 1341, shipped: 1849, failed: 128, failPct: 9.5, sla: 35, c2Hrs: 1.3, p3Hrs: 18.8, e2eHrs: 46.7 },
-  { day: "Apr 22", pairs: 1283, shipped: 1842, failed: 99, failPct: 7.7, sla: 43, c2Hrs: 1.3, p3Hrs: 18.0, e2eHrs: 47.9 },
-  { day: "Apr 23", pairs: 1431, shipped: 1857, failed: 66, failPct: 4.6, sla: 0, c2Hrs: 1.0, p3Hrs: 18.5, e2eHrs: 92.5 },
-  { day: "Apr 24", pairs: 1301, shipped: 1488, failed: 260, failPct: 20.0, sla: 0, c2Hrs: 1.1, p3Hrs: 50.0, e2eHrs: 88.3 },
-  { day: "Apr 25", pairs: 1048, shipped: 1140, failed: 139, failPct: 13.3, sla: 0, c2Hrs: 3.7, p3Hrs: 29.5, e2eHrs: 66.0 },
-  { day: "Apr 26", pairs: 1592, shipped: 1684, failed: 186, failPct: 11.7, sla: 0, c2Hrs: 4.1, p3Hrs: 19.6, e2eHrs: 42.9 },
-  { day: "Apr 27", pairs: 1651, shipped: 626, failed: 88, failPct: 5.3, sla: 0, c2Hrs: 2.9, p3Hrs: 18.9, e2eHrs: 20.4 },
-  { day: "Apr 28", pairs: 1305, shipped: 27, failed: 7, failPct: 0.5, sla: 0, c2Hrs: 1.1, p3Hrs: 19.9, e2eHrs: 15.9 },
-];
-
-const FACILITY_DATA = [
-  { f: "SE_TDM", v: "ws", ord: 2364, ship: 2383, fail: 33, sla: 0, c2d: 0.9, db: 14.9, bp: 37.4, ps: 0, e2e: 73.6 },
-  { f: "SE_INK", v: "ws", ord: 1417, ship: 2170, fail: 421, sla: 29, c2d: 9.9, db: 25.8, bp: -14.5, ps: 0.4, e2e: 25.3 },
-  { f: "US_ANS", v: "ws", ord: 842, ship: 578, fail: 195, sla: 0, c2d: 12.4, db: 19.9, bp: 35.0, ps: 0.1, e2e: 83.2 },
-  { f: "GB_GOC", v: "ws", ord: 612, ship: 501, fail: 1, sla: 0, c2d: 8.4, db: 24.9, bp: 14.0, ps: 0, e2e: 52.2 },
-  { f: "US_WMS", v: "ws", ord: 544, ship: 330, fail: 7, sla: 0, c2d: 13.5, db: 19.7, bp: 21.6, ps: 0, e2e: 60.2 },
-  { f: "GB_TFI", v: "ws", ord: 539, ship: 285, fail: 6, sla: 0, c2d: 1.0, db: 18.9, bp: 10.4, ps: 0, e2e: 44.1 },
-  { f: "US_TRU", v: "ws", ord: 538, ship: 525, fail: 6, sla: 0, c2d: 12.3, db: 19.0, bp: 15.6, ps: 0, e2e: 55.5 },
-  { f: "US_PRC", v: "V1", ord: 525, ship: 450, fail: 7, sla: 0, c2d: 0, db: 9.5, bp: 19.9, ps: 0, e2e: 29.6 },
-  { f: "US_HUD", v: "ws", ord: 385, ship: 212, fail: 1, sla: 0, c2d: 9.2, db: 17.9, bp: 17.1, ps: 0, e2e: 59.1 },
-  { f: "US_PRP", v: "V1", ord: 381, ship: 1, fail: 27, sla: 0, c2d: 0, db: 15.0, bp: 37.4, ps: 0, e2e: 36.7 },
-  { f: "AU_CMP", v: "ws", ord: 277, ship: 240, fail: 44, sla: 2, c2d: 13.1, db: 31.9, bp: 27.2, ps: 0, e2e: 97.1 },
-  { f: "CA_WMS", v: "ws", ord: 231, ship: 210, fail: 2, sla: 0, c2d: 0.8, db: 13.0, bp: 40.0, ps: 0, e2e: 73.4 },
-  { f: "NO_LOS", v: "ws", ord: 178, ship: 239, fail: 6, sla: 0, c2d: 8.2, db: 25.9, bp: 11.0, ps: 0, e2e: 44.6 },
-  { f: "NL_PRM", v: "ws", ord: 168, ship: 26, fail: 35, sla: 0, c2d: 1.0, db: 25.8, bp: 11.6, ps: 0, e2e: 21.5 },
-  { f: "US_LMS", v: "ws", ord: 167, ship: 70, fail: 20, sla: 0, c2d: 0.7, db: 9.9, bp: 46.3, ps: 0, e2e: 68.3 },
-];
-
-const FAIL_DATA = [
-  { stage: "After P2 deleg order in GN", facility: "SE_INK", count: 176, hrs: 25.6 },
-  { stage: "After P2 deleg order in GN", facility: "US_ANS", count: 157, hrs: 16.0 },
-  { stage: "After P3 batch release", facility: "SE_INK", count: 36, hrs: 62.5 },
-  { stage: "After P4 partner plate", facility: "AU_CMP", count: 26, hrs: 25.5 },
-  { stage: "After P2 deleg order in GN", facility: "NL_PRM", count: 18, hrs: 10.8 },
-  { stage: "After P4 partner plate", facility: "SE_INK", count: 15, hrs: 35.0 },
-  { stage: "After P2 deleg order in GN", facility: "SE_TDM", count: 15, hrs: 0.9 },
-  { stage: "After P3 batch release", facility: "US_LMS", count: 8, hrs: 83.4 },
-  { stage: "After P2 deleg order in GN", facility: "US_PRP", count: 8, hrs: 3.9 },
-  { stage: "After P4 partner plate", facility: "US_LMS", count: 6, hrs: 35.1 },
-];
-
-function Metric({ label, value, sub, warn }) {
-  return (
-    <div className="bg-gray-50 rounded-lg px-4 py-3">
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className={`text-2xl font-medium ${warn ? "text-red-600" : "text-gray-900"}`}>{value}</div>
-      {sub && <div className="text-xs text-gray-400 mt-0.5">{sub}</div>}
-    </div>
-  );
-}
-
 function heatColor(val, max) {
   if (val == null || isNaN(val)) return "";
   const ratio = Math.min(Math.abs(val) / max, 1);
   return ratio > 0.7 ? "text-red-600 font-medium" : ratio > 0.3 ? "text-amber-600" : "text-green-600";
 }
-
-function FlowStep({ id, name, dur, bottleneck, side }) {
+function FlowStep({
+  id,
+  name,
+  dur,
+  bottleneck,
+  side
+}) {
   const bg = bottleneck ? "bg-red-50 border-red-300 text-red-800" : side === "create" ? "bg-blue-50 border-blue-200 text-blue-800" : "bg-green-50 border-green-200 text-green-800";
-  return (
-    <div className={`rounded-md border px-2.5 py-1.5 text-xs ${bg}`}>
-      <div className="font-medium">{id} <span className="font-normal opacity-70">{name}</span></div>
-      <div className="text-[10px] opacity-70 mt-0.5">{dur}</div>
-    </div>
-  );
+  return /*#__PURE__*/React.createElement("div", {
+    className: `rounded-md border px-2.5 py-1.5 text-xs ${bg}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "font-medium"
+  }, id, " ", /*#__PURE__*/React.createElement("span", {
+    className: "font-normal opacity-70"
+  }, name)), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] opacity-70 mt-0.5"
+  }, dur));
 }
-
 function App() {
   const [tab, setTab] = useState("overview");
   const [range, setRange] = useState(7);
-  const updated = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-
+  const updated = new Date().toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
   const rangeData = TREND_DATA.slice(-range);
   const totalPairs = rangeData.reduce((s, d) => s + d.pairs, 0);
   const totalShipped = rangeData.reduce((s, d) => s + d.shipped, 0);
   const totalFailed = rangeData.reduce((s, d) => s + d.failed, 0);
   const totalSla = rangeData.reduce((s, d) => s + d.sla, 0);
   const facilities = FACILITY_DATA.length;
-
-  const tabs = [
-    { id: "overview", label: "Overview" },
-    { id: "trends", label: "Trends" },
-    { id: "facilities", label: "Facilities" },
-    { id: "failures", label: "Failures" },
-  ];
-
-  return (
-    <div className="max-w-[760px] mx-auto">
-      <div className="flex items-baseline justify-between mb-4">
-        <div>
-          <h1 className="text-lg font-semibold text-gray-900">Delegation flow bottleneck analysis</h1>
-          <p className="text-xs text-gray-400 mt-0.5">fct_connect_delegation_transition | {updated}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex bg-gray-100 rounded-md p-0.5">
-            {[2, 7, 14].map(d => (
-              <button key={d} onClick={() => setRange(d)} className={`text-xs px-2.5 py-1 rounded-md transition-colors ${range === d ? "bg-white text-gray-900 shadow-sm font-medium" : "text-gray-500 hover:text-gray-700"}`}>
-                {d}d
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-4 gap-3 mb-5">
-        <Metric label={`Delegation pairs (${range}d)`} value={totalPairs.toLocaleString()} sub={`${facilities} facilities`} />
-        <Metric label="Shipped" value={totalShipped.toLocaleString()} sub={`${Math.round(totalShipped / totalPairs * 100)}% rate`} />
-        <Metric label="Failed" value={totalFailed.toLocaleString()} sub={`${(totalFailed / totalPairs * 100).toFixed(1)}% rate`} warn={totalFailed / totalPairs > 0.1} />
-        <Metric label="SLA breached" value={totalSla.toLocaleString()} sub={totalSla > 0 ? "action needed" : "within SLA"} warn={totalSla > 0} />
-      </div>
-
-      <div className="flex gap-1 mb-4 border-b border-gray-200">
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${tab === t.id ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {tab === "overview" && (
-        <div>
-          <div className="mb-4">
-            <div className="text-sm font-medium text-gray-700 mb-2">Order journey: median stage durations (DBI-5233)</div>
-            <div className="text-xs text-gray-400 mb-3">Create side (C1-C5) then Connect side (P1-P10)</div>
-            <div className="flex items-center gap-1 flex-wrap mb-2">
-              <FlowStep id="C1" name="Order created" dur="2 min" side="create" />
-              <span className="text-gray-300 text-xs">&rarr;</span>
-              <FlowStep id="C2" name="Order in GN" dur="4.3 hrs" bottleneck />
-              <span className="text-gray-300 text-xs">&rarr;</span>
-              <FlowStep id="C3" name="Plate build" dur="2 min" side="create" />
-              <span className="text-gray-300 text-xs">&rarr;</span>
-              <FlowStep id="C4" name="Plate uploaded" dur="16 min" side="create" />
-              <span className="text-gray-300 text-xs">&rarr;</span>
-              <FlowStep id="C5" name="Delegation fires" dur="&lt;1 min" side="create" />
-            </div>
-            <div className="flex items-center gap-1 flex-wrap">
-              <FlowStep id="P1" name="Deleg order" dur="&lt;1 min" side="connect" />
-              <span className="text-gray-300 text-xs">&rarr;</span>
-              <FlowStep id="P2" name="Deleg in GN" dur="&lt;1 min" side="connect" />
-              <span className="text-gray-300 text-xs">&rarr;</span>
-              <FlowStep id="P3" name="Batch release" dur="23.7 hrs" bottleneck />
-              <span className="text-gray-300 text-xs">&rarr;</span>
-              <FlowStep id="P4" name="Partner plate" dur="6 min" side="connect" />
-              <span className="text-gray-300 text-xs">&rarr;</span>
-              <FlowStep id="P5" name="Printed" dur="&lt;1 min" side="connect" />
-              <span className="text-gray-300 text-xs">&rarr;</span>
-              <FlowStep id="P7" name="Scanned" dur="&lt;1 min" side="connect" />
-              <span className="text-gray-300 text-xs">&rarr;</span>
-              <FlowStep id="P8" name="Shipped" dur="&lt;1 min" side="connect" />
-            </div>
-          </div>
-
-          <div className="text-sm font-medium text-gray-700 mb-2 mt-6">{range}-day volume and failure trend</div>
-          <div style={{ height: 220 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={rangeData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="day" tick={{ fontSize: 11 }} />
-                <YAxis yAxisId="left" tick={{ fontSize: 11 }} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} domain={[0, 40]} unit="%" />
-                <Tooltip contentStyle={{ fontSize: 12 }} />
-                <Bar yAxisId="left" dataKey="pairs" fill="#3b82f6" opacity={0.3} name="Pairs" />
-                <Bar yAxisId="left" dataKey="shipped" fill="#10b981" opacity={0.5} name="Shipped" />
-                <Bar yAxisId="left" dataKey="failed" fill="#ef4444" name="Failed" />
-                <Line yAxisId="right" type="monotone" dataKey="failPct" stroke="#dc2626" strokeWidth={2} dot={{ r: 3 }} name="Fail %" />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
-
-      {tab === "trends" && (
-        <div>
-          <div className="text-sm font-medium text-gray-700 mb-1">Bottleneck #1: P3 Batch release wait (median hrs)</div>
-          <div className="text-xs text-gray-400 mb-2">Should be under 20 hrs. Spikes indicate scheduling or cutoff issues.</div>
-          <div style={{ height: 200 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={TREND_DATA} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="day" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 11 }} domain={[0, 60]} unit="h" />
-                <Tooltip contentStyle={{ fontSize: 12 }} />
-                <Area type="monotone" dataKey="p3Hrs" fill="#fef2f2" stroke="#ef4444" strokeWidth={2} name="P3 Batch release (hrs)" dot={{ r: 3, fill: "#ef4444" }} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="text-sm font-medium text-gray-700 mb-1 mt-5">Bottleneck #2: C2 GN propagation (median hrs)</div>
-          <div className="text-xs text-gray-400 mb-2">Should be under 2 hrs. Rising trend indicates platform slowdown.</div>
-          <div style={{ height: 200 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={TREND_DATA} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="day" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 11 }} domain={[0, 6]} unit="h" />
-                <Tooltip contentStyle={{ fontSize: 12 }} />
-                <Area type="monotone" dataKey="c2Hrs" fill="#fef9c3" stroke="#d97706" strokeWidth={2} name="C2 GN propagation (hrs)" dot={{ r: 3, fill: "#d97706" }} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="text-sm font-medium text-gray-700 mb-1 mt-5">End-to-end median (hrs)</div>
-          <div className="text-xs text-gray-400 mb-2">Total time from C1 order creation to P8 shipped. Downward trend = improvement.</div>
-          <div style={{ height: 200 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={TREND_DATA} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="day" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 11 }} domain={[0, 130]} unit="h" />
-                <Tooltip contentStyle={{ fontSize: 12 }} />
-                <Area type="monotone" dataKey="e2eHrs" fill="#eff6ff" stroke="#3b82f6" strokeWidth={2} name="E2E median (hrs)" dot={{ r: 3, fill: "#3b82f6" }} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
-
-      {tab === "facilities" && (
-        <div>
-          <div className="text-sm font-medium text-gray-700 mb-1">Facility heatmap: median hours per stage</div>
-          <div className="text-xs text-gray-400 mb-3">Red = slowest stage per facility. Sorted by volume.</div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-2 px-2 text-gray-500 font-medium">Facility</th>
-                  <th className="text-right py-2 px-2 text-gray-500 font-medium">Orders</th>
-                  <th className="text-right py-2 px-2 text-gray-500 font-medium">Create&rarr;Deleg<div className="text-[9px] font-normal text-gray-400">C1&rarr;P1</div></th>
-                  <th className="text-right py-2 px-2 text-gray-500 font-medium">Deleg&rarr;Batch<div className="text-[9px] font-normal text-gray-400">P1&rarr;P3</div></th>
-                  <th className="text-right py-2 px-2 text-gray-500 font-medium">Batch&rarr;Print<div className="text-[9px] font-normal text-gray-400">P3&rarr;P5</div></th>
-                  <th className="text-right py-2 px-2 text-gray-500 font-medium">Print&rarr;Ship<div className="text-[9px] font-normal text-gray-400">P5&rarr;P8</div></th>
-                  <th className="text-right py-2 px-2 text-gray-500 font-medium">E2E</th>
-                  <th className="text-right py-2 px-2 text-gray-500 font-medium">Fail%</th>
-                </tr>
-              </thead>
-              <tbody>
-                {FACILITY_DATA.map((r, i) => {
-                  const maxStage = Math.max(r.c2d, r.db, Math.abs(r.bp), r.ps);
-                  const failPct = (r.fail / r.ord * 100).toFixed(1);
-                  return (
-                    <tr key={i} className={`border-b border-gray-100 ${i % 2 === 0 ? "" : "bg-gray-50/50"}`}>
-                      <td className="py-1.5 px-2 font-medium text-gray-800">{r.f} {r.v !== "ws" && <span className="text-gray-400 font-normal">({r.v})</span>}</td>
-                      <td className="text-right py-1.5 px-2 text-gray-600">{r.ord.toLocaleString()}</td>
-                      <td className={`text-right py-1.5 px-2 ${r.c2d === maxStage && maxStage > 5 ? "text-red-600 font-medium" : heatColor(r.c2d, 20)}`}>{r.c2d}h</td>
-                      <td className={`text-right py-1.5 px-2 ${r.db === maxStage && maxStage > 5 ? "text-red-600 font-medium" : heatColor(r.db, 35)}`}>{r.db}h</td>
-                      <td className={`text-right py-1.5 px-2 ${Math.abs(r.bp) === maxStage && maxStage > 5 ? "text-red-600 font-medium" : heatColor(r.bp, 50)}`}>{r.bp}h</td>
-                      <td className={`text-right py-1.5 px-2 ${heatColor(r.ps, 2)}`}>{r.ps}h</td>
-                      <td className={`text-right py-1.5 px-2 ${heatColor(r.e2e, 100)}`}>{r.e2e}h</td>
-                      <td className={`text-right py-1.5 px-2 ${parseFloat(failPct) > 15 ? "text-red-600 font-medium" : parseFloat(failPct) > 5 ? "text-amber-600" : "text-green-600"}`}>{failPct}%</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <div className="text-[10px] text-gray-400 mt-2">* Negative batch&rarr;print values indicate timestamp ordering issues</div>
-
-          <div className="text-sm font-medium text-gray-700 mb-2 mt-6">Failure rate by facility (last {range} days)</div>
-          <div style={{ height: Math.max(200, FACILITY_DATA.length * 24) }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={FACILITY_DATA.map(r => ({ ...r, failPct: Math.round(r.fail / r.ord * 100 * 10) / 10 })).sort((a, b) => b.failPct - a.failPct)} layout="vertical" margin={{ top: 5, right: 40, bottom: 5, left: 55 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis type="number" tick={{ fontSize: 10 }} unit="%" domain={[0, 35]} />
-                <YAxis type="category" dataKey="f" tick={{ fontSize: 10 }} width={50} />
-                <Tooltip contentStyle={{ fontSize: 12 }} />
-                <Bar dataKey="failPct" name="Fail %" fill="#ef4444" radius={[0, 3, 3, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
-
-      {tab === "failures" && (
-        <div>
-          <div className="text-sm font-medium text-gray-700 mb-1">Failure hotspots: top 10 by failed orders</div>
-          <div className="text-xs text-gray-400 mb-3">Which stages and facilities accumulate the most failures.</div>
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-2 px-2 text-gray-500 font-medium">Failed at stage</th>
-                <th className="text-left py-2 px-2 text-gray-500 font-medium">Facility</th>
-                <th className="text-right py-2 px-2 text-gray-500 font-medium">Failed orders</th>
-                <th className="text-right py-2 px-2 text-gray-500 font-medium">Median time to fail</th>
-              </tr>
-            </thead>
-            <tbody>
-              {FAIL_DATA.map((r, i) => (
-                <tr key={i} className={`border-b border-gray-100 ${i % 2 === 0 ? "" : "bg-gray-50/50"}`}>
-                  <td className="py-1.5 px-2 text-gray-700">{r.stage}</td>
-                  <td className="py-1.5 px-2 font-medium text-gray-800">{r.facility}</td>
-                  <td className={`text-right py-1.5 px-2 ${r.count > 100 ? "text-red-600 font-medium" : r.count > 20 ? "text-amber-600" : "text-gray-600"}`}>{r.count}</td>
-                  <td className={`text-right py-1.5 px-2 ${r.hrs > 50 ? "text-red-600" : r.hrs < 5 ? "text-green-600" : "text-gray-600"}`}>{r.hrs} hrs</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <div className="text-sm font-medium text-gray-700 mb-2 mt-6">Daily failure count trend</div>
-          <div style={{ height: 200 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={TREND_DATA} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="day" tick={{ fontSize: 10 }} />
-                <YAxis yAxisId="left" tick={{ fontSize: 11 }} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} />
-                <Tooltip contentStyle={{ fontSize: 12 }} />
-                <Bar yAxisId="left" dataKey="failed" fill="#fca5a5" name="Failed" />
-                <Bar yAxisId="left" dataKey="sla" fill="#fbbf24" name="SLA breached" />
-                <Line yAxisId="right" type="monotone" dataKey="failPct" stroke="#dc2626" strokeWidth={2} dot={{ r: 3 }} name="Fail %" />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-4">
-            <div className="text-xs font-medium text-red-800 mb-1">Top action items</div>
-            <div className="text-xs text-red-700 space-y-1">
-              <div>1. SE_INK: 176 failures after P2 (deleg order in GN) - investigate workflow_service routing</div>
-              <div>2. US_ANS: 157 failures at same stage - similar root cause?</div>
-              <div>3. AU_CMP: 26 failures after P4 (partner plate) - plate quality or config issue</div>
-              <div>4. SE_INK: negative batch&rarr;print timing needs timestamp investigation</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="text-[10px] text-gray-400 mt-6 pt-3 border-t border-gray-100">
-        Source: gelato-data-warehouse.gelato_schema.fct_connect_delegation_transition | 42 columns | Numbering per DBI-5233
-      </div>
-    </div>
-  );
+  const tabs = [{
+    id: "overview",
+    label: "Overview"
+  }, {
+    id: "trends",
+    label: "Trends"
+  }, {
+    id: "facilities",
+    label: "Facilities"
+  }, {
+    id: "failures",
+    label: "Failures"
+  }];
+  return /*#__PURE__*/React.createElement("div", {
+    className: "max-w-[760px] mx-auto"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-baseline justify-between mb-4"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h1", {
+    className: "text-lg font-semibold text-gray-900"
+  }, "Delegation flow bottleneck analysis"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-gray-400 mt-0.5"
+  }, "fct_connect_delegation_transition | ", updated)), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex bg-gray-100 rounded-md p-0.5"
+  }, [2, 7, 14].map(d => /*#__PURE__*/React.createElement("button", {
+    key: d,
+    onClick: () => setRange(d),
+    className: `text-xs px-2.5 py-1 rounded-md transition-colors ${range === d ? "bg-white text-gray-900 shadow-sm font-medium" : "text-gray-500 hover:text-gray-700"}`
+  }, d, "d"))))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-4 gap-3 mb-5"
+  }, /*#__PURE__*/React.createElement(Metric, {
+    label: `Delegation pairs (${range}d)`,
+    value: totalPairs.toLocaleString(),
+    sub: `${facilities} facilities`
+  }), /*#__PURE__*/React.createElement(Metric, {
+    label: "Shipped",
+    value: totalShipped.toLocaleString(),
+    sub: `${Math.round(totalShipped / totalPairs * 100)}% rate`
+  }), /*#__PURE__*/React.createElement(Metric, {
+    label: "Failed",
+    value: totalFailed.toLocaleString(),
+    sub: `${(totalFailed / totalPairs * 100).toFixed(1)}% rate`,
+    warn: totalFailed / totalPairs > 0.1
+  }), /*#__PURE__*/React.createElement(Metric, {
+    label: "SLA breached",
+    value: totalSla.toLocaleString(),
+    sub: totalSla > 0 ? "action needed" : "within SLA",
+    warn: totalSla > 0
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1 mb-4 border-b border-gray-200"
+  }, tabs.map(t => /*#__PURE__*/React.createElement("button", {
+    key: t.id,
+    onClick: () => setTab(t.id),
+    className: `px-3 py-2 text-xs font-medium border-b-2 transition-colors ${tab === t.id ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`
+  }, t.label))), tab === "overview" && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "mb-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-medium text-gray-700 mb-2"
+  }, "Order journey: median stage durations (DBI-5233)"), /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-gray-400 mb-3"
+  }, "Create side (C1-C5) then Connect side (P1-P10)"), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1 flex-wrap mb-2"
+  }, /*#__PURE__*/React.createElement(FlowStep, {
+    id: "C1",
+    name: "Order created",
+    dur: "2 min",
+    side: "create"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-gray-300 text-xs"
+  }, "\u2192"), /*#__PURE__*/React.createElement(FlowStep, {
+    id: "C2",
+    name: "Order in GN",
+    dur: "4.3 hrs",
+    bottleneck: true
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-gray-300 text-xs"
+  }, "\u2192"), /*#__PURE__*/React.createElement(FlowStep, {
+    id: "C3",
+    name: "Plate build",
+    dur: "2 min",
+    side: "create"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-gray-300 text-xs"
+  }, "\u2192"), /*#__PURE__*/React.createElement(FlowStep, {
+    id: "C4",
+    name: "Plate uploaded",
+    dur: "16 min",
+    side: "create"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-gray-300 text-xs"
+  }, "\u2192"), /*#__PURE__*/React.createElement(FlowStep, {
+    id: "C5",
+    name: "Delegation fires",
+    dur: "<1 min",
+    side: "create"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1 flex-wrap"
+  }, /*#__PURE__*/React.createElement(FlowStep, {
+    id: "P1",
+    name: "Deleg order",
+    dur: "<1 min",
+    side: "connect"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-gray-300 text-xs"
+  }, "\u2192"), /*#__PURE__*/React.createElement(FlowStep, {
+    id: "P2",
+    name: "Deleg in GN",
+    dur: "<1 min",
+    side: "connect"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-gray-300 text-xs"
+  }, "\u2192"), /*#__PURE__*/React.createElement(FlowStep, {
+    id: "P3",
+    name: "Batch release",
+    dur: "23.7 hrs",
+    bottleneck: true
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-gray-300 text-xs"
+  }, "\u2192"), /*#__PURE__*/React.createElement(FlowStep, {
+    id: "P4",
+    name: "Partner plate",
+    dur: "6 min",
+    side: "connect"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-gray-300 text-xs"
+  }, "\u2192"), /*#__PURE__*/React.createElement(FlowStep, {
+    id: "P5",
+    name: "Printed",
+    dur: "<1 min",
+    side: "connect"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-gray-300 text-xs"
+  }, "\u2192"), /*#__PURE__*/React.createElement(FlowStep, {
+    id: "P7",
+    name: "Scanned",
+    dur: "<1 min",
+    side: "connect"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-gray-300 text-xs"
+  }, "\u2192"), /*#__PURE__*/React.createElement(FlowStep, {
+    id: "P8",
+    name: "Shipped",
+    dur: "<1 min",
+    side: "connect"
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-medium text-gray-700 mb-2 mt-6"
+  }, range, "-day volume and failure trend"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 220
+    }
+  }, /*#__PURE__*/React.createElement(ResponsiveContainer, {
+    width: "100%",
+    height: "100%"
+  }, /*#__PURE__*/React.createElement(ComposedChart, {
+    data: rangeData,
+    margin: {
+      top: 5,
+      right: 5,
+      bottom: 5,
+      left: 5
+    }
+  }, /*#__PURE__*/React.createElement(CartesianGrid, {
+    strokeDasharray: "3 3",
+    stroke: "#f0f0f0"
+  }), /*#__PURE__*/React.createElement(XAxis, {
+    dataKey: "day",
+    tick: {
+      fontSize: 11
+    }
+  }), /*#__PURE__*/React.createElement(YAxis, {
+    yAxisId: "left",
+    tick: {
+      fontSize: 11
+    }
+  }), /*#__PURE__*/React.createElement(YAxis, {
+    yAxisId: "right",
+    orientation: "right",
+    tick: {
+      fontSize: 11
+    },
+    domain: [0, 40],
+    unit: "%"
+  }), /*#__PURE__*/React.createElement(Tooltip, {
+    contentStyle: {
+      fontSize: 12
+    }
+  }), /*#__PURE__*/React.createElement(Bar, {
+    yAxisId: "left",
+    dataKey: "pairs",
+    fill: "#3b82f6",
+    opacity: 0.3,
+    name: "Pairs"
+  }), /*#__PURE__*/React.createElement(Bar, {
+    yAxisId: "left",
+    dataKey: "shipped",
+    fill: "#10b981",
+    opacity: 0.5,
+    name: "Shipped"
+  }), /*#__PURE__*/React.createElement(Bar, {
+    yAxisId: "left",
+    dataKey: "failed",
+    fill: "#ef4444",
+    name: "Failed"
+  }), /*#__PURE__*/React.createElement(Line, {
+    yAxisId: "right",
+    type: "monotone",
+    dataKey: "failPct",
+    stroke: "#dc2626",
+    strokeWidth: 2,
+    dot: {
+      r: 3
+    },
+    name: "Fail %"
+  }))))), tab === "trends" && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-medium text-gray-700 mb-1"
+  }, "Bottleneck #1: P3 Batch release wait (median hrs)"), /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-gray-400 mb-2"
+  }, "Should be under 20 hrs. Spikes indicate scheduling or cutoff issues."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 200
+    }
+  }, /*#__PURE__*/React.createElement(ResponsiveContainer, {
+    width: "100%",
+    height: "100%"
+  }, /*#__PURE__*/React.createElement(ComposedChart, {
+    data: TREND_DATA,
+    margin: {
+      top: 5,
+      right: 5,
+      bottom: 5,
+      left: 5
+    }
+  }, /*#__PURE__*/React.createElement(CartesianGrid, {
+    strokeDasharray: "3 3",
+    stroke: "#f0f0f0"
+  }), /*#__PURE__*/React.createElement(XAxis, {
+    dataKey: "day",
+    tick: {
+      fontSize: 10
+    }
+  }), /*#__PURE__*/React.createElement(YAxis, {
+    tick: {
+      fontSize: 11
+    },
+    domain: [0, 60],
+    unit: "h"
+  }), /*#__PURE__*/React.createElement(Tooltip, {
+    contentStyle: {
+      fontSize: 12
+    }
+  }), /*#__PURE__*/React.createElement(Area, {
+    type: "monotone",
+    dataKey: "p3Hrs",
+    fill: "#fef2f2",
+    stroke: "#ef4444",
+    strokeWidth: 2,
+    name: "P3 Batch release (hrs)",
+    dot: {
+      r: 3,
+      fill: "#ef4444"
+    }
+  })))), /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-medium text-gray-700 mb-1 mt-5"
+  }, "Bottleneck #2: C2 GN propagation (median hrs)"), /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-gray-400 mb-2"
+  }, "Should be under 2 hrs. Rising trend indicates platform slowdown."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 200
+    }
+  }, /*#__PURE__*/React.createElement(ResponsiveContainer, {
+    width: "100%",
+    height: "100%"
+  }, /*#__PURE__*/React.createElement(ComposedChart, {
+    data: TREND_DATA,
+    margin: {
+      top: 5,
+      right: 5,
+      bottom: 5,
+      left: 5
+    }
+  }, /*#__PURE__*/React.createElement(CartesianGrid, {
+    strokeDasharray: "3 3",
+    stroke: "#f0f0f0"
+  }), /*#__PURE__*/React.createElement(XAxis, {
+    dataKey: "day",
+    tick: {
+      fontSize: 10
+    }
+  }), /*#__PURE__*/React.createElement(YAxis, {
+    tick: {
+      fontSize: 11
+    },
+    domain: [0, 6],
+    unit: "h"
+  }), /*#__PURE__*/React.createElement(Tooltip, {
+    contentStyle: {
+      fontSize: 12
+    }
+  }), /*#__PURE__*/React.createElement(Area, {
+    type: "monotone",
+    dataKey: "c2Hrs",
+    fill: "#fef9c3",
+    stroke: "#d97706",
+    strokeWidth: 2,
+    name: "C2 GN propagation (hrs)",
+    dot: {
+      r: 3,
+      fill: "#d97706"
+    }
+  })))), /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-medium text-gray-700 mb-1 mt-5"
+  }, "End-to-end median (hrs)"), /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-gray-400 mb-2"
+  }, "Total time from C1 order creation to P8 shipped. Downward trend = improvement."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 200
+    }
+  }, /*#__PURE__*/React.createElement(ResponsiveContainer, {
+    width: "100%",
+    height: "100%"
+  }, /*#__PURE__*/React.createElement(ComposedChart, {
+    data: TREND_DATA,
+    margin: {
+      top: 5,
+      right: 5,
+      bottom: 5,
+      left: 5
+    }
+  }, /*#__PURE__*/React.createElement(CartesianGrid, {
+    strokeDasharray: "3 3",
+    stroke: "#f0f0f0"
+  }), /*#__PURE__*/React.createElement(XAxis, {
+    dataKey: "day",
+    tick: {
+      fontSize: 10
+    }
+  }), /*#__PURE__*/React.createElement(YAxis, {
+    tick: {
+      fontSize: 11
+    },
+    domain: [0, 130],
+    unit: "h"
+  }), /*#__PURE__*/React.createElement(Tooltip, {
+    contentStyle: {
+      fontSize: 12
+    }
+  }), /*#__PURE__*/React.createElement(Area, {
+    type: "monotone",
+    dataKey: "e2eHrs",
+    fill: "#eff6ff",
+    stroke: "#3b82f6",
+    strokeWidth: 2,
+    name: "E2E median (hrs)",
+    dot: {
+      r: 3,
+      fill: "#3b82f6"
+    }
+  }))))), tab === "facilities" && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-medium text-gray-700 mb-1"
+  }, "Facility heatmap: median hours per stage"), /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-gray-400 mb-3"
+  }, "Red = slowest stage per facility. Sorted by volume."), /*#__PURE__*/React.createElement("div", {
+    className: "overflow-x-auto"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-xs"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "border-b border-gray-200"
+  }, /*#__PURE__*/React.createElement("th", {
+    className: "text-left py-2 px-2 text-gray-500 font-medium"
+  }, "Facility"), /*#__PURE__*/React.createElement("th", {
+    className: "text-right py-2 px-2 text-gray-500 font-medium"
+  }, "Orders"), /*#__PURE__*/React.createElement("th", {
+    className: "text-right py-2 px-2 text-gray-500 font-medium"
+  }, "Create\u2192Deleg", /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-normal text-gray-400"
+  }, "C1\u2192P1")), /*#__PURE__*/React.createElement("th", {
+    className: "text-right py-2 px-2 text-gray-500 font-medium"
+  }, "Deleg\u2192Batch", /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-normal text-gray-400"
+  }, "P1\u2192P3")), /*#__PURE__*/React.createElement("th", {
+    className: "text-right py-2 px-2 text-gray-500 font-medium"
+  }, "Batch\u2192Print", /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-normal text-gray-400"
+  }, "P3\u2192P5")), /*#__PURE__*/React.createElement("th", {
+    className: "text-right py-2 px-2 text-gray-500 font-medium"
+  }, "Print\u2192Ship", /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-normal text-gray-400"
+  }, "P5\u2192P8")), /*#__PURE__*/React.createElement("th", {
+    className: "text-right py-2 px-2 text-gray-500 font-medium"
+  }, "E2E"), /*#__PURE__*/React.createElement("th", {
+    className: "text-right py-2 px-2 text-gray-500 font-medium"
+  }, "Fail%"))), /*#__PURE__*/React.createElement("tbody", null, FACILITY_DATA.map((r, i) => {
+    const maxStage = Math.max(r.c2d, r.db, Math.abs(r.bp), r.ps);
+    const failPct = (r.fail / r.ord * 100).toFixed(1);
+    return /*#__PURE__*/React.createElement("tr", {
+      key: i,
+      className: `border-b border-gray-100 ${i % 2 === 0 ? "" : "bg-gray-50/50"}`
+    }, /*#__PURE__*/React.createElement("td", {
+      className: "py-1.5 px-2 font-medium text-gray-800"
+    }, r.f, " ", r.v !== "ws" && /*#__PURE__*/React.createElement("span", {
+      className: "text-gray-400 font-normal"
+    }, "(", r.v, ")")), /*#__PURE__*/React.createElement("td", {
+      className: "text-right py-1.5 px-2 text-gray-600"
+    }, r.ord.toLocaleString()), /*#__PURE__*/React.createElement("td", {
+      className: `text-right py-1.5 px-2 ${r.c2d === maxStage && maxStage > 5 ? "text-red-600 font-medium" : heatColor(r.c2d, 20)}`
+    }, r.c2d, "h"), /*#__PURE__*/React.createElement("td", {
+      className: `text-right py-1.5 px-2 ${r.db === maxStage && maxStage > 5 ? "text-red-600 font-medium" : heatColor(r.db, 35)}`
+    }, r.db, "h"), /*#__PURE__*/React.createElement("td", {
+      className: `text-right py-1.5 px-2 ${Math.abs(r.bp) === maxStage && maxStage > 5 ? "text-red-600 font-medium" : heatColor(r.bp, 50)}`
+    }, r.bp, "h"), /*#__PURE__*/React.createElement("td", {
+      className: `text-right py-1.5 px-2 ${heatColor(r.ps, 2)}`
+    }, r.ps, "h"), /*#__PURE__*/React.createElement("td", {
+      className: `text-right py-1.5 px-2 ${heatColor(r.e2e, 100)}`
+    }, r.e2e, "h"), /*#__PURE__*/React.createElement("td", {
+      className: `text-right py-1.5 px-2 ${parseFloat(failPct) > 15 ? "text-red-600 font-medium" : parseFloat(failPct) > 5 ? "text-amber-600" : "text-green-600"}`
+    }, failPct, "%"));
+  })))), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-gray-400 mt-2"
+  }, "* Negative batch\u2192print values indicate timestamp ordering issues"), /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-medium text-gray-700 mb-2 mt-6"
+  }, "Failure rate by facility (last ", range, " days)"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: Math.max(200, FACILITY_DATA.length * 24)
+    }
+  }, /*#__PURE__*/React.createElement(ResponsiveContainer, {
+    width: "100%",
+    height: "100%"
+  }, /*#__PURE__*/React.createElement(BarChart, {
+    data: FACILITY_DATA.map(r => ({
+      ...r,
+      failPct: Math.round(r.fail / r.ord * 100 * 10) / 10
+    })).sort((a, b) => b.failPct - a.failPct),
+    layout: "vertical",
+    margin: {
+      top: 5,
+      right: 40,
+      bottom: 5,
+      left: 55
+    }
+  }, /*#__PURE__*/React.createElement(CartesianGrid, {
+    strokeDasharray: "3 3",
+    stroke: "#f0f0f0"
+  }), /*#__PURE__*/React.createElement(XAxis, {
+    type: "number",
+    tick: {
+      fontSize: 10
+    },
+    unit: "%",
+    domain: [0, 35]
+  }), /*#__PURE__*/React.createElement(YAxis, {
+    type: "category",
+    dataKey: "f",
+    tick: {
+      fontSize: 10
+    },
+    width: 50
+  }), /*#__PURE__*/React.createElement(Tooltip, {
+    contentStyle: {
+      fontSize: 12
+    }
+  }), /*#__PURE__*/React.createElement(Bar, {
+    dataKey: "failPct",
+    name: "Fail %",
+    fill: "#ef4444",
+    radius: [0, 3, 3, 0]
+  }))))), tab === "failures" && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-medium text-gray-700 mb-1"
+  }, "Failure hotspots: top 10 by failed orders"), /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-gray-400 mb-3"
+  }, "Which stages and facilities accumulate the most failures."), /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-xs"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "border-b border-gray-200"
+  }, /*#__PURE__*/React.createElement("th", {
+    className: "text-left py-2 px-2 text-gray-500 font-medium"
+  }, "Failed at stage"), /*#__PURE__*/React.createElement("th", {
+    className: "text-left py-2 px-2 text-gray-500 font-medium"
+  }, "Facility"), /*#__PURE__*/React.createElement("th", {
+    className: "text-right py-2 px-2 text-gray-500 font-medium"
+  }, "Failed orders"), /*#__PURE__*/React.createElement("th", {
+    className: "text-right py-2 px-2 text-gray-500 font-medium"
+  }, "Median time to fail"))), /*#__PURE__*/React.createElement("tbody", null, FAIL_DATA.map((r, i) => /*#__PURE__*/React.createElement("tr", {
+    key: i,
+    className: `border-b border-gray-100 ${i % 2 === 0 ? "" : "bg-gray-50/50"}`
+  }, /*#__PURE__*/React.createElement("td", {
+    className: "py-1.5 px-2 text-gray-700"
+  }, r.stage), /*#__PURE__*/React.createElement("td", {
+    className: "py-1.5 px-2 font-medium text-gray-800"
+  }, r.facility), /*#__PURE__*/React.createElement("td", {
+    className: `text-right py-1.5 px-2 ${r.count > 100 ? "text-red-600 font-medium" : r.count > 20 ? "text-amber-600" : "text-gray-600"}`
+  }, r.count), /*#__PURE__*/React.createElement("td", {
+    className: `text-right py-1.5 px-2 ${r.hrs > 50 ? "text-red-600" : r.hrs < 5 ? "text-green-600" : "text-gray-600"}`
+  }, r.hrs, " hrs"))))), /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-medium text-gray-700 mb-2 mt-6"
+  }, "Daily failure count trend"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 200
+    }
+  }, /*#__PURE__*/React.createElement(ResponsiveContainer, {
+    width: "100%",
+    height: "100%"
+  }, /*#__PURE__*/React.createElement(ComposedChart, {
+    data: TREND_DATA,
+    margin: {
+      top: 5,
+      right: 5,
+      bottom: 5,
+      left: 5
+    }
+  }, /*#__PURE__*/React.createElement(CartesianGrid, {
+    strokeDasharray: "3 3",
+    stroke: "#f0f0f0"
+  }), /*#__PURE__*/React.createElement(XAxis, {
+    dataKey: "day",
+    tick: {
+      fontSize: 10
+    }
+  }), /*#__PURE__*/React.createElement(YAxis, {
+    yAxisId: "left",
+    tick: {
+      fontSize: 11
+    }
+  }), /*#__PURE__*/React.createElement(YAxis, {
+    yAxisId: "right",
+    orientation: "right",
+    tick: {
+      fontSize: 11
+    }
+  }), /*#__PURE__*/React.createElement(Tooltip, {
+    contentStyle: {
+      fontSize: 12
+    }
+  }), /*#__PURE__*/React.createElement(Bar, {
+    yAxisId: "left",
+    dataKey: "failed",
+    fill: "#fca5a5",
+    name: "Failed"
+  }), /*#__PURE__*/React.createElement(Bar, {
+    yAxisId: "left",
+    dataKey: "sla",
+    fill: "#fbbf24",
+    name: "SLA breached"
+  }), /*#__PURE__*/React.createElement(Line, {
+    yAxisId: "right",
+    type: "monotone",
+    dataKey: "failPct",
+    stroke: "#dc2626",
+    strokeWidth: 2,
+    dot: {
+      r: 3
+    },
+    name: "Fail %"
+  })))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-red-50 border border-red-200 rounded-lg p-3 mt-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-xs font-medium text-red-800 mb-1"
+  }, "Top action items"), /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-red-700 space-y-1"
+  }, /*#__PURE__*/React.createElement("div", null, "1. SE_INK: 176 failures after P2 (deleg order in GN) - investigate workflow_service routing"), /*#__PURE__*/React.createElement("div", null, "2. US_ANS: 157 failures at same stage - similar root cause?"), /*#__PURE__*/React.createElement("div", null, "3. AU_CMP: 26 failures after P4 (partner plate) - plate quality or config issue"), /*#__PURE__*/React.createElement("div", null, "4. SE_INK: negative batch\u2192print timing needs timestamp investigation")))), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-gray-400 mt-6 pt-3 border-t border-gray-100"
+  }, "Source: gelato-data-warehouse.gelato_schema.fct_connect_delegation_transition | 42 columns | Numbering per DBI-5233"));
 }
-
 try {
-  ReactDOM.render(<App />, document.getElementById("root"));
-} catch(e) {
+  ReactDOM.render(/*#__PURE__*/React.createElement(App, null), document.getElementById("root"));
+} catch (e) {
   document.getElementById("root").innerHTML = '<div style="color:red;padding:20px;">Render error: ' + e.message + '</div>';
 }
 </script>
