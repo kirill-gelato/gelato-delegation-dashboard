@@ -4,1029 +4,156 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Delegation Flow Bottleneck Analysis</title>
-<script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/prop-types@15.8.1/prop-types.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/recharts@2.5.0/umd/Recharts.min.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<style>body{font-family:'Inter',system-ui,sans-serif;margin:0;padding:24px;background:#fff;}</style>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" as="script">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;padding:20px 24px;background:#fff;color:#111;font-size:14px;max-width:800px;margin:0 auto}
+.hdr{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+h1{font-size:18px;font-weight:600}
+.sub{font-size:12px;color:#888;margin-top:2px}
+.rng{display:flex;background:#f3f4f6;border-radius:6px;padding:2px;gap:1px}
+.rng button{font-size:12px;padding:4px 10px;border:none;border-radius:5px;cursor:pointer;background:transparent;color:#666;font-family:inherit}
+.rng button.on{background:#fff;color:#111;box-shadow:0 1px 2px rgba(0,0,0,.08);font-weight:500}
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}
+.m{background:#f9fafb;border-radius:8px;padding:10px 14px}
+.m .l{font-size:11px;color:#888}
+.m .v{font-size:22px;font-weight:500;margin:2px 0}
+.m .v.w{color:#dc2626}
+.m .s{font-size:11px;color:#aaa}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e5e7eb;margin-bottom:16px}
+.tabs button{font-size:12px;font-weight:500;padding:8px 14px;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:#888;font-family:inherit}
+.tabs button.on{color:#2563eb;border-bottom-color:#2563eb}
+.sec{font-size:14px;font-weight:500;color:#333;margin:20px 0 4px}
+.dsc{font-size:12px;color:#999;margin-bottom:10px}
+.flow{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-bottom:6px}
+.fs{border-radius:6px;border:1px solid;padding:5px 8px;font-size:11px}
+.fs b{font-weight:500}.fs .n{opacity:.7}.fs .d{font-size:10px;opacity:.6;margin-top:2px}
+.fc{background:#eff6ff;border-color:#bfdbfe;color:#1e40af}
+.fp{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
+.fb{background:#fef2f2;border-color:#fca5a5;color:#991b1b}
+.ar{color:#ccc;font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:4px}
+th{text-align:left;padding:7px 8px;border-bottom:1px solid #e5e7eb;color:#888;font-weight:500;font-size:11px}
+th.r,td.r{text-align:right}
+td{padding:6px 8px;border-bottom:1px solid #f3f4f6;font-variant-numeric:tabular-nums}
+tr:nth-child(even){background:#fafafa}
+.ts{font-size:9px;font-weight:400;color:#bbb}
+.re{color:#dc2626;font-weight:500}.am{color:#d97706}.gr{color:#16a34a}.bl{color:#2563eb;font-weight:500}
+.lk{text-decoration:underline;text-decoration-style:dotted;cursor:pointer}
+.lk:hover{text-decoration-style:solid}
+.cb{font-size:10px;background:none;border:1px solid #e5e7eb;border-radius:4px;padding:1px 5px;cursor:pointer;color:#888;margin-left:4px;font-family:inherit}
+.cb:hover{background:#f3f4f6;color:#333}.cb.ok{color:#16a34a;border-color:#bbf7d0}
+.al{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;margin-top:16px}
+.al h4{font-size:12px;font-weight:500;color:#991b1b;margin-bottom:6px}
+.al div{font-size:12px;color:#b91c1c;margin:3px 0}
+.cc{position:relative;height:200px;margin-bottom:8px}
+.ft{font-size:10px;color:#bbb;margin-top:20px;padding-top:10px;border-top:1px solid #f3f4f6}
+@media(max-width:600px){.metrics{grid-template-columns:repeat(2,1fr)}}
+</style>
 </head>
 <body>
-<div id="root"><div style="text-align:center;padding:40px;color:#888">Loading dashboard...</div></div>
+<div class="hdr">
+  <div><h1>Delegation flow bottleneck analysis</h1><div class="sub">fct_connect_delegation_transition | <span id="ts"></span></div></div>
+  <div class="rng" id="rng"></div>
+</div>
+<div class="metrics" id="met"></div>
+<div class="tabs" id="tabs"></div>
+<div id="ct"></div>
+<div class="ft">Source: gelato-data-warehouse.gelato_schema.fct_connect_delegation_transition | 42 columns | Numbering per DBI-5233</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
-const {
-  useState
-} = React;
-const {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  ComposedChart,
-  Area
-} = Recharts;
-const TREND_DATA = [{
-  day: "Apr 15",
-  pairs: 733,
-  shipped: 1243,
-  failed: 91,
-  failPct: 12.4,
-  sla: 29,
-  c2Hrs: 1.0,
-  p3Hrs: 13.1,
-  e2eHrs: 110.7
-}, {
-  day: "Apr 16",
-  pairs: 1005,
-  shipped: 1683,
-  failed: 112,
-  failPct: 11.1,
-  sla: 97,
-  c2Hrs: 0.8,
-  p3Hrs: 14.9,
-  e2eHrs: 117.4
-}, {
-  day: "Apr 17",
-  pairs: 982,
-  shipped: 1468,
-  failed: 237,
-  failPct: 24.1,
-  sla: 311,
-  c2Hrs: 1.0,
-  p3Hrs: 55.0,
-  e2eHrs: 106.7
-}, {
-  day: "Apr 18",
-  pairs: 708,
-  shipped: 1099,
-  failed: 78,
-  failPct: 11.0,
-  sla: 100,
-  c2Hrs: 0.7,
-  p3Hrs: 32.0,
-  e2eHrs: 92.1
-}, {
-  day: "Apr 19",
-  pairs: 981,
-  shipped: 1653,
-  failed: 64,
-  failPct: 6.5,
-  sla: 6,
-  c2Hrs: 0.8,
-  p3Hrs: 14.0,
-  e2eHrs: 67.7
-}, {
-  day: "Apr 20",
-  pairs: 1232,
-  shipped: 2090,
-  failed: 142,
-  failPct: 11.5,
-  sla: 27,
-  c2Hrs: 1.0,
-  p3Hrs: 17.5,
-  e2eHrs: 64.7
-}, {
-  day: "Apr 21",
-  pairs: 1341,
-  shipped: 1849,
-  failed: 128,
-  failPct: 9.5,
-  sla: 35,
-  c2Hrs: 1.3,
-  p3Hrs: 18.8,
-  e2eHrs: 46.7
-}, {
-  day: "Apr 22",
-  pairs: 1283,
-  shipped: 1842,
-  failed: 99,
-  failPct: 7.7,
-  sla: 43,
-  c2Hrs: 1.3,
-  p3Hrs: 18.0,
-  e2eHrs: 47.9
-}, {
-  day: "Apr 23",
-  pairs: 1431,
-  shipped: 1857,
-  failed: 66,
-  failPct: 4.6,
-  sla: 0,
-  c2Hrs: 1.0,
-  p3Hrs: 18.5,
-  e2eHrs: 92.5
-}, {
-  day: "Apr 24",
-  pairs: 1301,
-  shipped: 1488,
-  failed: 260,
-  failPct: 20.0,
-  sla: 0,
-  c2Hrs: 1.1,
-  p3Hrs: 50.0,
-  e2eHrs: 88.3
-}, {
-  day: "Apr 25",
-  pairs: 1048,
-  shipped: 1140,
-  failed: 139,
-  failPct: 13.3,
-  sla: 0,
-  c2Hrs: 3.7,
-  p3Hrs: 29.5,
-  e2eHrs: 66.0
-}, {
-  day: "Apr 26",
-  pairs: 1592,
-  shipped: 1684,
-  failed: 186,
-  failPct: 11.7,
-  sla: 0,
-  c2Hrs: 4.1,
-  p3Hrs: 19.6,
-  e2eHrs: 42.9
-}, {
-  day: "Apr 27",
-  pairs: 1651,
-  shipped: 626,
-  failed: 88,
-  failPct: 5.3,
-  sla: 0,
-  c2Hrs: 2.9,
-  p3Hrs: 18.9,
-  e2eHrs: 20.4
-}, {
-  day: "Apr 28",
-  pairs: 1305,
-  shipped: 27,
-  failed: 7,
-  failPct: 0.5,
-  sla: 0,
-  c2Hrs: 1.1,
-  p3Hrs: 19.9,
-  e2eHrs: 15.9
-}];
-const FACILITY_DATA = [{
-  f: "SE_TDM",
-  v: "ws",
-  ord: 2364,
-  ship: 2383,
-  fail: 33,
-  sla: 0,
-  c2d: 0.9,
-  db: 14.9,
-  bp: 37.4,
-  ps: 0,
-  e2e: 73.6
-}, {
-  f: "SE_INK",
-  v: "ws",
-  ord: 1417,
-  ship: 2170,
-  fail: 421,
-  sla: 29,
-  c2d: 9.9,
-  db: 25.8,
-  bp: -14.5,
-  ps: 0.4,
-  e2e: 25.3
-}, {
-  f: "US_ANS",
-  v: "ws",
-  ord: 842,
-  ship: 578,
-  fail: 195,
-  sla: 0,
-  c2d: 12.4,
-  db: 19.9,
-  bp: 35.0,
-  ps: 0.1,
-  e2e: 83.2
-}, {
-  f: "GB_GOC",
-  v: "ws",
-  ord: 612,
-  ship: 501,
-  fail: 1,
-  sla: 0,
-  c2d: 8.4,
-  db: 24.9,
-  bp: 14.0,
-  ps: 0,
-  e2e: 52.2
-}, {
-  f: "US_WMS",
-  v: "ws",
-  ord: 544,
-  ship: 330,
-  fail: 7,
-  sla: 0,
-  c2d: 13.5,
-  db: 19.7,
-  bp: 21.6,
-  ps: 0,
-  e2e: 60.2
-}, {
-  f: "GB_TFI",
-  v: "ws",
-  ord: 539,
-  ship: 285,
-  fail: 6,
-  sla: 0,
-  c2d: 1.0,
-  db: 18.9,
-  bp: 10.4,
-  ps: 0,
-  e2e: 44.1
-}, {
-  f: "US_TRU",
-  v: "ws",
-  ord: 538,
-  ship: 525,
-  fail: 6,
-  sla: 0,
-  c2d: 12.3,
-  db: 19.0,
-  bp: 15.6,
-  ps: 0,
-  e2e: 55.5
-}, {
-  f: "US_PRC",
-  v: "V1",
-  ord: 525,
-  ship: 450,
-  fail: 7,
-  sla: 0,
-  c2d: 0,
-  db: 9.5,
-  bp: 19.9,
-  ps: 0,
-  e2e: 29.6
-}, {
-  f: "US_HUD",
-  v: "ws",
-  ord: 385,
-  ship: 212,
-  fail: 1,
-  sla: 0,
-  c2d: 9.2,
-  db: 17.9,
-  bp: 17.1,
-  ps: 0,
-  e2e: 59.1
-}, {
-  f: "US_PRP",
-  v: "V1",
-  ord: 381,
-  ship: 1,
-  fail: 27,
-  sla: 0,
-  c2d: 0,
-  db: 15.0,
-  bp: 37.4,
-  ps: 0,
-  e2e: 36.7
-}, {
-  f: "AU_CMP",
-  v: "ws",
-  ord: 277,
-  ship: 240,
-  fail: 44,
-  sla: 2,
-  c2d: 13.1,
-  db: 31.9,
-  bp: 27.2,
-  ps: 0,
-  e2e: 97.1
-}, {
-  f: "CA_WMS",
-  v: "ws",
-  ord: 231,
-  ship: 210,
-  fail: 2,
-  sla: 0,
-  c2d: 0.8,
-  db: 13.0,
-  bp: 40.0,
-  ps: 0,
-  e2e: 73.4
-}, {
-  f: "NO_LOS",
-  v: "ws",
-  ord: 178,
-  ship: 239,
-  fail: 6,
-  sla: 0,
-  c2d: 8.2,
-  db: 25.9,
-  bp: 11.0,
-  ps: 0,
-  e2e: 44.6
-}, {
-  f: "NL_PRM",
-  v: "ws",
-  ord: 168,
-  ship: 26,
-  fail: 35,
-  sla: 0,
-  c2d: 1.0,
-  db: 25.8,
-  bp: 11.6,
-  ps: 0,
-  e2e: 21.5
-}, {
-  f: "US_LMS",
-  v: "ws",
-  ord: 167,
-  ship: 70,
-  fail: 20,
-  sla: 0,
-  c2d: 0.7,
-  db: 9.9,
-  bp: 46.3,
-  ps: 0,
-  e2e: 68.3
-}];
-const FAIL_DATA = [{
-  stage: "After P2 deleg order in GN",
-  facility: "SE_INK",
-  count: 176,
-  hrs: 25.6
-}, {
-  stage: "After P2 deleg order in GN",
-  facility: "US_ANS",
-  count: 157,
-  hrs: 16.0
-}, {
-  stage: "After P3 batch release",
-  facility: "SE_INK",
-  count: 36,
-  hrs: 62.5
-}, {
-  stage: "After P4 partner plate",
-  facility: "AU_CMP",
-  count: 26,
-  hrs: 25.5
-}, {
-  stage: "After P2 deleg order in GN",
-  facility: "NL_PRM",
-  count: 18,
-  hrs: 10.8
-}, {
-  stage: "After P4 partner plate",
-  facility: "SE_INK",
-  count: 15,
-  hrs: 35.0
-}, {
-  stage: "After P2 deleg order in GN",
-  facility: "SE_TDM",
-  count: 15,
-  hrs: 0.9
-}, {
-  stage: "After P3 batch release",
-  facility: "US_LMS",
-  count: 8,
-  hrs: 83.4
-}, {
-  stage: "After P2 deleg order in GN",
-  facility: "US_PRP",
-  count: 8,
-  hrs: 3.9
-}, {
-  stage: "After P4 partner plate",
-  facility: "US_LMS",
-  count: 6,
-  hrs: 35.1
-}];
-function Metric({
-  label,
-  value,
-  sub,
-  warn
-}) {
-  return /*#__PURE__*/React.createElement("div", {
-    className: "bg-gray-50 rounded-lg px-4 py-3"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-xs text-gray-500"
-  }, label), /*#__PURE__*/React.createElement("div", {
-    className: `text-2xl font-medium ${warn ? "text-red-600" : "text-gray-900"}`
-  }, value), sub && /*#__PURE__*/React.createElement("div", {
-    className: "text-xs text-gray-400 mt-0.5"
-  }, sub));
+const T=[
+{d:"Apr 15",pt:"C",p:245,s:427,f:36,fp:14.7,sl:10,c2:1.3,p3:18,e:108.9},{d:"Apr 15",pt:"V",p:22,s:47,f:0,fp:0,sl:0,c2:0,p3:3.1,e:140.2},
+{d:"Apr 16",pt:"C",p:830,s:1132,f:112,fp:13.5,sl:97,c2:1,p3:18.9,e:106},{d:"Apr 16",pt:"V",p:175,s:551,f:0,fp:0,sl:0,c2:.1,p3:9.1,e:211.4},
+{d:"Apr 17",pt:"C",p:838,s:1094,f:237,fp:28.3,sl:311,c2:1.7,p3:51,e:101.4},{d:"Apr 17",pt:"V",p:144,s:374,f:0,fp:0,sl:0,c2:.1,p3:60.5,e:195.4},
+{d:"Apr 18",pt:"C",p:550,s:708,f:76,fp:13.8,sl:100,c2:2,p3:29,e:77.1},{d:"Apr 18",pt:"V",p:158,s:391,f:2,fp:1.3,sl:0,c2:.1,p3:35.8,e:173.2},
+{d:"Apr 19",pt:"C",p:770,s:1116,f:60,fp:7.8,sl:6,c2:2.1,p3:18,e:58.4},{d:"Apr 19",pt:"V",p:211,s:537,f:4,fp:1.9,sl:0,c2:0,p3:11.6,e:182},
+{d:"Apr 20",pt:"C",p:1026,s:1401,f:138,fp:13.5,sl:27,c2:3.6,p3:18.9,e:53.4},{d:"Apr 20",pt:"V",p:206,s:689,f:4,fp:1.9,sl:0,c2:.1,p3:12.6,e:178.8},
+{d:"Apr 21",pt:"C",p:1237,s:1771,f:66,fp:5.3,sl:35,c2:3.1,p3:18.9,e:45.9},{d:"Apr 21",pt:"V",p:104,s:78,f:62,fp:59.6,sl:0,c2:.1,p3:9.7,e:162.9},
+{d:"Apr 22",pt:"C",p:1208,s:1730,f:90,fp:7.5,sl:43,c2:3.4,p3:19,e:47.3},{d:"Apr 22",pt:"V",p:75,s:112,f:9,fp:12,sl:0,c2:.1,p3:6.9,e:145.8},
+{d:"Apr 23",pt:"C",p:1206,s:1614,f:66,fp:5.5,sl:0,c2:3.3,p3:67,e:94.4},{d:"Apr 23",pt:"V",p:225,s:243,f:0,fp:0,sl:0,c2:0,p3:9.6,e:28.6},
+{d:"Apr 24",pt:"C",p:1167,s:1426,f:243,fp:20.8,sl:0,c2:7.5,p3:48.9,e:88.8},{d:"Apr 24",pt:"V",p:134,s:62,f:17,fp:12.7,sl:0,c2:.1,p3:54.4,e:68.9},
+{d:"Apr 25",pt:"C",p:933,s:1131,f:135,fp:14.5,sl:0,c2:12.2,p3:25.9,e:66},{d:"Apr 25",pt:"V",p:115,s:9,f:4,fp:3.5,sl:0,c2:.1,p3:35.7,e:71.6},
+{d:"Apr 26",pt:"C",p:1453,s:1670,f:186,fp:12.8,sl:0,c2:6.3,p3:19.7,e:42.9},{d:"Apr 26",pt:"V",p:139,s:14,f:0,fp:0,sl:0,c2:0,p3:16.1,e:50.8},
+{d:"Apr 27",pt:"C",p:1526,s:615,f:87,fp:5.7,sl:0,c2:5,p3:19.7,e:20.4},{d:"Apr 27",pt:"V",p:125,s:11,f:1,fp:.8,sl:0,c2:.1,p3:11.1,e:23},
+{d:"Apr 28",pt:"C",p:1202,s:12,f:4,fp:.3,sl:0,c2:2.2,p3:23,e:18.7},{d:"Apr 28",pt:"V",p:103,s:15,f:3,fp:2.9,sl:0,c2:.1,p3:7.6,e:9.8}
+];
+const F=[
+{f:"SE_TDM",pt:"C",o:2186,s:2036,fl:27,sl:0,cd:.9,db:17,bp:37.5,ps:0,ee:83,dp:102},
+{f:"SE_INK",pt:"C",o:1328,s:1988,fl:412,sl:29,cd:10,db:25.8,bp:-14.5,ps:.4,ee:26.2,dp:106},
+{f:"US_ANS",pt:"C",o:804,s:576,fl:195,sl:0,cd:12.1,db:19.9,bp:34.9,ps:.1,ee:83.2,dp:101},
+{f:"GB_GOC",pt:"C",o:573,s:443,fl:1,sl:0,cd:8.5,db:24.9,bp:14,ps:0,ee:52.2,dp:102},
+{f:"US_WMS",pt:"C",o:524,s:306,fl:7,sl:0,cd:13.5,db:19.7,bp:21.3,ps:0,ee:59.2,dp:104},
+{f:"GB_TFI",pt:"C",o:510,s:204,fl:6,sl:0,cd:1,db:21,bp:10.4,ps:0,ee:45.6,dp:103},
+{f:"US_TRU",pt:"C",o:479,s:459,fl:0,sl:0,cd:12.3,db:19,bp:14.4,ps:0,ee:63.4,dp:101},
+{f:"US_PRC",pt:"V",o:504,s:360,fl:7,sl:0,cd:0,db:9.6,bp:19,ps:0,ee:29,dp:100},
+{f:"US_HUD",pt:"C",o:357,s:173,fl:0,sl:0,cd:8.6,db:17.9,bp:16.4,ps:0,ee:57.3,dp:107},
+{f:"US_PRP",pt:"V",o:365,s:1,fl:19,sl:0,cd:0,db:15.5,bp:37.4,ps:0,ee:36.7,dp:100},
+{f:"AU_CMP",pt:"C",o:259,s:220,fl:38,sl:2,cd:13.2,db:31.9,bp:27.3,ps:0,ee:97.1,dp:106},
+{f:"CA_WMS",pt:"C",o:214,s:185,fl:2,sl:0,cd:.7,db:12,bp:40.8,ps:0,ee:80.9,dp:101},
+{f:"NL_PRM",pt:"C",o:165,s:23,fl:35,sl:0,cd:1,db:25.8,bp:11.6,ps:0,ee:21.5,dp:100},
+{f:"US_LMS",pt:"C",o:161,s:62,fl:19,sl:0,cd:.7,db:9.9,bp:46.3,ps:0,ee:72.2,dp:101},
+{f:"NO_LOS",pt:"C",o:155,s:201,fl:3,sl:0,cd:6.4,db:25.9,bp:11.8,ps:0,ee:50.1,dp:112},
+{f:"US_PRC",pt:"C",o:36,s:10,fl:1,sl:0,cd:10.1,db:19,bp:43.3,ps:0,ee:66.5,dp:100},
+{f:"FR_3MA",pt:"C",o:44,s:16,fl:9,sl:0,cd:11.8,db:25.9,bp:11.7,ps:0,ee:51.3,dp:100},
+{f:"FR_KLO",pt:"C",o:33,s:20,fl:0,sl:0,cd:12.5,db:26,bp:8.9,ps:.2,ee:36.3,dp:100}
+];
+const FL=[{s:"After P2 deleg order in GN",fc:"SE_INK",n:176,h:25.6,ids:"0093518f-9798-49f4-98cd-24ca33587e0c,011c9192-9a0c-4b9c-a2e6-9b8b9d71ff52,030c5d9e-8d11-4926-b339-63727dc77892,0381f3d8-60fd-4060-a44b-e51b23d1677a,05de5f39-4b01-4cff-b5df-a588806c1055,07f7dd13-6a6e-46a6-83e6-175fd9e41696,088e872f-5b37-405f-a351-12197d96cf47,092080d0-c401-41bb-a347-bf01ad0985ef,0a554323-9997-4098-a84d-a9e11f59752f,0c42d0be-78f8-432e-8a73-7d0b575585db"},{s:"After P2 deleg order in GN",fc:"US_ANS",n:157,h:16,ids:"0279dac2-8db6-4b3b-8948-c36e82e70f73,03d3e724-dffc-4abb-801f-bbe3ed07a4d3,04c35b07-ac63-4c78-bb7d-05f4908a2574,0aab8e85-f48b-4eda-b86c-2db64056be17,0b81f36c-8203-47a5-b41d-b51b03c3f35d,0de2fc4c-17ab-4a14-9df5-85bbaf6b7612,0e0634da-a5db-4331-97b4-3a0fc7ab0b12,112a0f0c-74f4-45a2-92bd-dd3d964e3bab,12daabb1-cb69-4558-bf01-22dd498f2184,17d9847d-d1cf-4d4f-969d-935be8db0d12"},{s:"After P3 batch release",fc:"SE_INK",n:36,h:62.5,ids:"07edc598-c797-437c-b3cf-3a6f55fd8bee,08907e12-2499-4ad6-b9be-722225be45cd,08aa7db2-4072-4098-b3cd-91921df94587,0c319bbe-f73b-4868-9877-bf44febcf76d,14d426ab-9951-4854-bdfc-619507b36f49,16b27fcb-5307-4798-99f3-1fabe0410b29,1efc867b-79ab-45ec-a7a2-5478744dc57a,27912918-9347-4064-9429-a76803bca5fd,2a556a97-7bad-4a4a-8f7b-3d4a9be21962,304ee6e2-65c8-4223-993a-2be143255cb3"},{s:"After P4 partner plate",fc:"AU_CMP",n:25,h:25.5,ids:"0389e9a3-791b-4595-aff3-479fb45335b8,0aef74e6-6973-4c5c-88e0-1c1ae9d8edc9,292cb893-05a8-4c94-b98a-6e5e260d47ce,33a60dd6-edff-4cec-8b38-ac0b1f694cc7,3c76de4f-8cea-4bab-ad5f-c71bc4b52e13,496dd9d5-a60b-4896-9c67-ae2f0a0db4a3,4d7b2b3c-16c1-434d-8237-37ff031742a2,57864e25-da16-4cb1-912e-2b135b5b7d9c,666abfd8-aa0f-491a-8a2e-bcdab74cdd0c,6a18ea6a-43f9-4c53-ab90-2b725ecdebe1"},{s:"After P2 deleg order in GN",fc:"NL_PRM",n:18,h:10.8,ids:"104991c3-ba35-4bdf-8b2d-d99d2c11faa3,108eca27-1435-4e7f-9677-c946ff226496,191d178a-8e8d-443b-8b38-71b75df8eaf4,38541730-62e6-42ec-a0e9-ebd3c5895f28,8c756bf9-5ffe-4afe-b2e5-b7f5fdfa0f56,8f68e5e8-54cc-4e03-94dd-5ab2c5fba401,b05800ea-02a8-41c4-a1b9-f7f367f3a7a6,c85b71fe-2ec4-4626-9cac-b9be11a4942b,ca116a08-538f-439e-855a-81e90d925706,d16e58d0-f265-4113-9e4e-b2d440240586"},{s:"After P2 deleg order in GN",fc:"SE_TDM",n:15,h:.9,ids:"083ad953-f58f-4523-8e90-e77a70b0939e,15c528d3-1526-4f5a-860f-a8c22cf7c89c,1b4645fa-b981-42de-a06a-d95dae7ca615,26285d34-191f-456f-9e2a-903f2fded097,51f4e272-dee7-4745-8e13-cf02f1bc2c5d,5281d484-5730-4978-a932-4e3ab71a1896,7b41af0e-05e0-4e5f-8e72-b501d86d4cb3,9f8ed7d4-d32c-41f3-9afe-139d65f956fe,ad1cb18f-506a-4e69-9664-192c8d083e83,b410c198-2a55-4e33-9991-52d9b41c149d"},{s:"After P4 partner plate",fc:"SE_INK",n:14,h:35,ids:"0814ff21-1aa0-42a5-a9fb-aa8370ecd0d6,1c960519-347d-433c-9d8e-24c6032826d7,4714697a-a0db-4aad-a6bb-87e4b34c407e,64ee62ad-307b-4409-a049-a6c0da0d4455,697a1811-1bbc-4c9a-835f-1faae40a48b1,7f56d621-537b-4df8-8e55-b302763757a2,9873ea3f-4b7d-4e9a-a9b4-a3254eb99240,b9e5b515-101c-41c5-8f64-e2c2e2a3e192,cd4db5f8-c65f-449e-a8e4-93208688fa2c,d0e5e26a-5a09-4e82-bdbb-048f9de4b021"},{s:"After P3 batch release",fc:"US_LMS",n:8,h:83.4,ids:"37fcce69-1bf0-4856-b1b3-45ed5f9ecc87,64e98d56-ad66-45b2-9003-e568f2da9ad7,837c06e1-f75d-46d8-8180-a66792b16793,8b8c07dc-fd83-45d2-89f8-4cfd3accf915,97a901b5-3ab2-4aae-83a4-f9dc7386ff29,bb1b09e7-5ea7-4f6e-816a-c174c8eca62d,c1ddd2de-6191-4d64-af90-1cd7a492e6fe,e87a6254-df31-4964-b5d0-ff1cb37b975d"},{s:"After P2 deleg order in GN",fc:"US_PRP",n:4,h:3.9,ids:"18dc9da6-7cf4-4c32-abc1-cbad6a4a45dd,a9e1e262-b9a9-4dba-a3a2-6e3ce2d71ad2,c6df814b-68f3-45aa-b647-1fa2ea5beb71,ec1afaa6-b204-44a4-a993-3e81c65e1377"},{s:"After P4 partner plate",fc:"US_LMS",n:5,h:35.1,ids:"00d53085-e45b-4ba3-88a7-e05a900f73b1,1cce308f-fa68-4243-a57c-ea8ca4472437,52cd71a2-84b1-402e-8fab-b865a40ad54b,b8ac13da-11d6-4597-bed5-f4aaa1b437cc,f7217756-6b27-4c6c-af1c-09ec38e7b487"}];
+const MPJ="https://production-ui.ie.live.gelato.tech/production-tools/manage-print-job?orderId=";
+let R=7,tb="overview",P="all",ch=[];
+function hc(v,m){let r=Math.min(Math.abs(v)/m,1);return r>.7?"re":r>.3?"am":"gr"}
+function sm(a,k){return a.reduce((s,x)=>s+(x[k]||0),0)}
+function gF(){return P==="all"?F:F.filter(r=>P==="V"?r.pt==="V":r.pt==="C")}
+function gT(){
+  let ft=P==="all"?T:T.filter(r=>P==="V"?r.pt==="V":r.pt==="C");
+  let days=[...new Set(ft.map(r=>r.d))];
+  return days.map(d=>{let rows=ft.filter(r=>r.d===d);let tp=sm(rows,"p"),tf=sm(rows,"f");
+    return{d,p:tp,s:sm(rows,"s"),f:tf,fp:tp?+(tf/tp*100).toFixed(1):0,sl:sm(rows,"sl"),
+      c2:rows.length?+(rows.reduce((s,r)=>s+r.c2,0)/rows.length).toFixed(1):0,
+      p3:rows.length?+(rows.reduce((s,r)=>s+r.p3,0)/rows.length).toFixed(1):0,
+      e:rows.length?+(rows.reduce((s,r)=>s+(r.e||0),0)/rows.length).toFixed(1):0}});
 }
-function heatColor(val, max) {
-  if (val == null || isNaN(val)) return "";
-  const ratio = Math.min(Math.abs(val) / max, 1);
-  return ratio > 0.7 ? "text-red-600 font-medium" : ratio > 0.3 ? "text-amber-600" : "text-green-600";
+function fs(id,nm,dur,t){return`<div class="fs f${t}"><div><b>${id}</b> <span class="n">${nm}</span></div><div class="d">${dur}</div></div>`}
+function go(){
+  let ff=gF(),td=gT(),rd=td.slice(-R);
+  let ftp=sm(ff,"o"),fts=sm(ff,"s"),ftf=sm(ff,"fl");
+  document.getElementById("ts").textContent=new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
+  document.getElementById("rng").innerHTML=[2,7,14].map(d=>`<button class="${R===d?"on":""}" onclick="R=${d};go()">${d}d</button>`).join("")+'<span style="width:1px;background:#ddd;margin:2px 4px"></span>'+[["all","All"],["C","Create"],["V","Connect"]].map(([k,l])=>`<button class="${P===k?"on":""}" onclick="P='${k}';go()">${l}</button>`).join("");
+  document.getElementById("met").innerHTML=`<div class="m"><div class="l">Delegation pairs${P!=="all"?" ("+(P==="V"?"Connect":"Create")+")":""} (${R}d)</div><div class="v">${ftp.toLocaleString()}</div><div class="s">${ff.length} facilities</div></div><div class="m"><div class="l">Deleg. share (network)</div><div class="v">9.7%</div><div class="s">delegated / all Create originals</div></div><div class="m"><div class="l">Deleg. share (enabled)</div><div class="v gr">~100%</div><div class="s">delegated / originals at enabled facilities</div></div><div class="m"><div class="l">Failed</div><div class="v${ftf/ftp>.1?" w":""}">${ftf.toLocaleString()}</div><div class="s">${ftp>0?(ftf/ftp*100).toFixed(1):0}% rate</div></div><div class="m"><div class="l">Shipped</div><div class="v">${fts.toLocaleString()}</div><div class="s">${ftp>0?Math.round(fts/ftp*100):0}% rate</div></div>`;
+  document.getElementById("tabs").innerHTML=["overview","trends","facilities","failures"].map(t=>`<button class="${tb===t?"on":""}" onclick="tb='${t}';go()">${t[0].toUpperCase()+t.slice(1)}</button>`).join("");
+  ch.forEach(c=>c.destroy());ch=[];
+  let c=document.getElementById("ct");
+  if(tb==="overview"){
+    let steps=[["C1","Order created","2 min","c"],["C2","Order in GN","4.3 hrs","b"],["C3","Plate build","2 min","c"],["C4","Plate uploaded","16 min","c"],["C5","Delegation fires","<1 min","c"]];
+    let ps=[["P1","Deleg order","<1 min","p"],["P2","Deleg in GN","<1 min","p"],["P3","Batch release","23.7 hrs","b"],["P4","Partner plate","6 min","p"],["P5","Printed","<1 min","p"],["P7","Scanned","<1 min","p"],["P8","Shipped","<1 min","p"]];
+    c.innerHTML=`<div class="sec">Order journey: median stage durations (DBI-5233)</div><div class="dsc">Create side (C1-C5) then Connect side (P1-P10)</div><div class="flow">${steps.map(s=>fs(...s)).join('<span class="ar">\u2192</span>')}</div><div class="flow">${ps.map(s=>fs(...s)).join('<span class="ar">\u2192</span>')}</div><div class="sec">${R}-day volume and failure trend</div><div class="cc" style="height:220px"><canvas id="c1"></canvas></div>`;
+    ch.push(new Chart(document.getElementById("c1"),{type:"bar",data:{labels:rd.map(x=>x.d),datasets:[{label:"Pairs",data:rd.map(x=>x.p),backgroundColor:"rgba(59,130,246,.25)",order:2},{label:"Shipped",data:rd.map(x=>x.s),backgroundColor:"rgba(16,185,129,.4)",order:2},{label:"Failed",data:rd.map(x=>x.f),backgroundColor:"#ef4444",order:2},{type:"line",label:"Fail %",data:rd.map(x=>x.fp),borderColor:"#dc2626",backgroundColor:"rgba(220,38,38,.05)",fill:true,borderWidth:2,pointRadius:3,tension:.4,yAxisID:"y1",order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10}}}},scales:{y:{beginAtZero:true},y1:{position:"right",min:0,max:40,ticks:{callback:v=>v+"%"},grid:{display:false}}}}}));
+  }else if(tb==="trends"){
+    c.innerHTML=`<div class="sec">Bottleneck #1: P3 Batch release wait (median hrs)</div><div class="dsc">Should be under 20 hrs. Spikes indicate scheduling or cutoff issues.</div><div class="cc"><canvas id="c1"></canvas></div><div class="sec">Bottleneck #2: C2 GN propagation (median hrs)</div><div class="dsc">Should be under 2 hrs. Rising trend indicates platform slowdown.</div><div class="cc"><canvas id="c2"></canvas></div><div class="sec">End-to-end median (hrs)</div><div class="dsc">Total time from C1 order creation to P8 shipped. Downward trend = improvement.</div><div class="cc"><canvas id="c3"></canvas></div>`;
+    let mk=(id,k,col,mx)=>ch.push(new Chart(document.getElementById(id),{type:"line",data:{labels:td.map(x=>x.d),datasets:[{data:td.map(x=>x[k]),borderColor:col,backgroundColor:col+"22",fill:true,borderWidth:2,pointRadius:3,tension:.4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:mx,ticks:{callback:v=>v+"h"}}}}}));
+    mk("c1","p3","#ef4444",60);mk("c2","c2","#d97706",6);mk("c3","e","#3b82f6",130);
+  }else if(tb==="facilities"){
+    let h=`<div class="sec">Facility heatmap: median hours per stage</div><div class="dsc">Red = slowest stage per facility. Sorted by volume.${P!=="all"?" Showing: "+(P==="V"?"Connect (within Connect platform)":"Create (Create to Connect partner)"):""}</div><table><thead><tr><th>Facility</th><th class="r">Orders</th><th class="r">Deleg%<div class="ts">deleg/orig</div></th><th class="r">Create\u2192Deleg<div class="ts">C1\u2192P1</div></th><th class="r">Deleg\u2192Batch<div class="ts">P1\u2192P3</div></th><th class="r">Batch\u2192Print<div class="ts">P3\u2192P5</div></th><th class="r">Print\u2192Ship<div class="ts">P5\u2192P8</div></th><th class="r">E2E</th><th class="r">Fail%</th></tr></thead><tbody>`;
+    ff.forEach(r=>{let mx=Math.max(r.cd,r.db,Math.abs(r.bp),r.ps),fp=(r.fl/r.o*100).toFixed(1);
+      h+=`<tr><td style="font-weight:500">${r.f}${P==="all"?` <span style="color:#aaa;font-weight:400;font-size:10px">${r.pt==="V"?"Connect":"Create"}</span>`:""}</td><td class="r">${r.o.toLocaleString()}</td><td class="r ${r.dp>=100?"gr":r.dp>=95?"":"am"}">${r.dp}%</td><td class="r ${r.cd===mx&&mx>5?"re":hc(r.cd,20)}">${r.cd}h</td><td class="r ${r.db===mx&&mx>5?"re":hc(r.db,35)}">${r.db}h</td><td class="r ${Math.abs(r.bp)===mx&&mx>5?"re":hc(r.bp,50)}">${r.bp}h</td><td class="r ${hc(r.ps,2)}">${r.ps}h</td><td class="r ${hc(r.ee,100)}">${r.ee}h</td><td class="r ${fp>15?"re":fp>5?"am":"gr"}">${fp}%</td></tr>`});
+    h+=`</tbody></table><div style="font-size:10px;color:#bbb;margin:4px 0">* Negative batch\u2192print values indicate timestamp ordering issues</div><div class="sec">Failure rate by facility</div><div class="cc" style="height:${Math.max(200,ff.length*24)}px"><canvas id="c1"></canvas></div>`;
+    c.innerHTML=h;
+    let so=[...ff].sort((a,b)=>(b.fl/b.o)-(a.fl/a.o));
+    ch.push(new Chart(document.getElementById("c1"),{type:"bar",data:{labels:so.map(x=>x.f),datasets:[{data:so.map(x=>+(x.fl/x.o*100).toFixed(1)),backgroundColor:"#ef4444"}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:"y",plugins:{legend:{display:false}},scales:{x:{max:35,ticks:{callback:v=>v+"%"}}}}}));
+  }else{
+    let h=`<div class="sec">Failure hotspots: top 10 by failed orders</div><div class="dsc">Click count to open in MPJ. \uD83D\uDCCB copies all order IDs.</div><table><thead><tr><th>Failed at stage</th><th>Facility</th><th class="r">Failed orders</th><th class="r">Median time to fail</th></tr></thead><tbody>`;
+    FL.forEach((r,i)=>{h+=`<tr><td>${r.s}</td><td style="font-weight:500">${r.fc}</td><td class="r" style="white-space:nowrap"><a href="${MPJ}${encodeURIComponent(r.ids)}" target="_blank" class="lk ${r.n>100?"re":r.n>20?"am":""}">${r.n}</a><button class="cb" onclick="cp(this,${i})">\uD83D\uDCCB</button></td><td class="r ${r.h>50?"re":r.h<5?"gr":""}">${r.h} hrs</td></tr>`});
+    h+=`</tbody></table><div class="sec">Daily failure count trend</div><div class="cc"><canvas id="c1"></canvas></div><div class="al"><h4>Top action items</h4><div>1. SE_INK: 176 failures after P2 (deleg order in GN) - investigate workflow_service routing</div><div>2. US_ANS: 157 failures at same stage - similar root cause?</div><div>3. AU_CMP: 25 failures after P4 (partner plate) - plate quality or config issue</div><div>4. SE_INK: negative batch\u2192print timing needs timestamp investigation</div></div>`;
+    c.innerHTML=h;
+    ch.push(new Chart(document.getElementById("c1"),{type:"bar",data:{labels:td.map(x=>x.d),datasets:[{label:"Failed",data:td.map(x=>x.f),backgroundColor:"#fca5a5",order:2},{label:"SLA breached",data:td.map(x=>x.sl),backgroundColor:"#fbbf24",order:2},{type:"line",label:"Fail %",data:td.map(x=>x.fp),borderColor:"#dc2626",backgroundColor:"rgba(220,38,38,.05)",fill:true,borderWidth:2,pointRadius:3,tension:.4,yAxisID:"y1",order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10}}}},scales:{y:{beginAtZero:true},y1:{position:"right",grid:{display:false}}}}}));
+  }
 }
-function FlowStep({
-  id,
-  name,
-  dur,
-  bottleneck,
-  side
-}) {
-  const bg = bottleneck ? "bg-red-50 border-red-300 text-red-800" : side === "create" ? "bg-blue-50 border-blue-200 text-blue-800" : "bg-green-50 border-green-200 text-green-800";
-  return /*#__PURE__*/React.createElement("div", {
-    className: `rounded-md border px-2.5 py-1.5 text-xs ${bg}`
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "font-medium"
-  }, id, " ", /*#__PURE__*/React.createElement("span", {
-    className: "font-normal opacity-70"
-  }, name)), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] opacity-70 mt-0.5"
-  }, dur));
-}
-function App() {
-  const [tab, setTab] = useState("overview");
-  const [range, setRange] = useState(7);
-  const updated = new Date().toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-  const rangeData = TREND_DATA.slice(-range);
-  const totalPairs = rangeData.reduce((s, d) => s + d.pairs, 0);
-  const totalShipped = rangeData.reduce((s, d) => s + d.shipped, 0);
-  const totalFailed = rangeData.reduce((s, d) => s + d.failed, 0);
-  const totalSla = rangeData.reduce((s, d) => s + d.sla, 0);
-  const facilities = FACILITY_DATA.length;
-  const tabs = [{
-    id: "overview",
-    label: "Overview"
-  }, {
-    id: "trends",
-    label: "Trends"
-  }, {
-    id: "facilities",
-    label: "Facilities"
-  }, {
-    id: "failures",
-    label: "Failures"
-  }];
-  return /*#__PURE__*/React.createElement("div", {
-    className: "max-w-[760px] mx-auto"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-baseline justify-between mb-4"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h1", {
-    className: "text-lg font-semibold text-gray-900"
-  }, "Delegation flow bottleneck analysis"), /*#__PURE__*/React.createElement("p", {
-    className: "text-xs text-gray-400 mt-0.5"
-  }, "fct_connect_delegation_transition | ", updated)), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex bg-gray-100 rounded-md p-0.5"
-  }, [2, 7, 14].map(d => /*#__PURE__*/React.createElement("button", {
-    key: d,
-    onClick: () => setRange(d),
-    className: `text-xs px-2.5 py-1 rounded-md transition-colors ${range === d ? "bg-white text-gray-900 shadow-sm font-medium" : "text-gray-500 hover:text-gray-700"}`
-  }, d, "d"))))), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-4 gap-3 mb-5"
-  }, /*#__PURE__*/React.createElement(Metric, {
-    label: `Delegation pairs (${range}d)`,
-    value: totalPairs.toLocaleString(),
-    sub: `${facilities} facilities`
-  }), /*#__PURE__*/React.createElement(Metric, {
-    label: "Shipped",
-    value: totalShipped.toLocaleString(),
-    sub: `${Math.round(totalShipped / totalPairs * 100)}% rate`
-  }), /*#__PURE__*/React.createElement(Metric, {
-    label: "Failed",
-    value: totalFailed.toLocaleString(),
-    sub: `${(totalFailed / totalPairs * 100).toFixed(1)}% rate`,
-    warn: totalFailed / totalPairs > 0.1
-  }), /*#__PURE__*/React.createElement(Metric, {
-    label: "SLA breached",
-    value: totalSla.toLocaleString(),
-    sub: totalSla > 0 ? "action needed" : "within SLA",
-    warn: totalSla > 0
-  })), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-1 mb-4 border-b border-gray-200"
-  }, tabs.map(t => /*#__PURE__*/React.createElement("button", {
-    key: t.id,
-    onClick: () => setTab(t.id),
-    className: `px-3 py-2 text-xs font-medium border-b-2 transition-colors ${tab === t.id ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`
-  }, t.label))), tab === "overview" && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    className: "mb-4"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-sm font-medium text-gray-700 mb-2"
-  }, "Order journey: median stage durations (DBI-5233)"), /*#__PURE__*/React.createElement("div", {
-    className: "text-xs text-gray-400 mb-3"
-  }, "Create side (C1-C5) then Connect side (P1-P10)"), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1 flex-wrap mb-2"
-  }, /*#__PURE__*/React.createElement(FlowStep, {
-    id: "C1",
-    name: "Order created",
-    dur: "2 min",
-    side: "create"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-gray-300 text-xs"
-  }, "\u2192"), /*#__PURE__*/React.createElement(FlowStep, {
-    id: "C2",
-    name: "Order in GN",
-    dur: "4.3 hrs",
-    bottleneck: true
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-gray-300 text-xs"
-  }, "\u2192"), /*#__PURE__*/React.createElement(FlowStep, {
-    id: "C3",
-    name: "Plate build",
-    dur: "2 min",
-    side: "create"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-gray-300 text-xs"
-  }, "\u2192"), /*#__PURE__*/React.createElement(FlowStep, {
-    id: "C4",
-    name: "Plate uploaded",
-    dur: "16 min",
-    side: "create"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-gray-300 text-xs"
-  }, "\u2192"), /*#__PURE__*/React.createElement(FlowStep, {
-    id: "C5",
-    name: "Delegation fires",
-    dur: "<1 min",
-    side: "create"
-  })), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1 flex-wrap"
-  }, /*#__PURE__*/React.createElement(FlowStep, {
-    id: "P1",
-    name: "Deleg order",
-    dur: "<1 min",
-    side: "connect"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-gray-300 text-xs"
-  }, "\u2192"), /*#__PURE__*/React.createElement(FlowStep, {
-    id: "P2",
-    name: "Deleg in GN",
-    dur: "<1 min",
-    side: "connect"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-gray-300 text-xs"
-  }, "\u2192"), /*#__PURE__*/React.createElement(FlowStep, {
-    id: "P3",
-    name: "Batch release",
-    dur: "23.7 hrs",
-    bottleneck: true
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-gray-300 text-xs"
-  }, "\u2192"), /*#__PURE__*/React.createElement(FlowStep, {
-    id: "P4",
-    name: "Partner plate",
-    dur: "6 min",
-    side: "connect"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-gray-300 text-xs"
-  }, "\u2192"), /*#__PURE__*/React.createElement(FlowStep, {
-    id: "P5",
-    name: "Printed",
-    dur: "<1 min",
-    side: "connect"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-gray-300 text-xs"
-  }, "\u2192"), /*#__PURE__*/React.createElement(FlowStep, {
-    id: "P7",
-    name: "Scanned",
-    dur: "<1 min",
-    side: "connect"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-gray-300 text-xs"
-  }, "\u2192"), /*#__PURE__*/React.createElement(FlowStep, {
-    id: "P8",
-    name: "Shipped",
-    dur: "<1 min",
-    side: "connect"
-  }))), /*#__PURE__*/React.createElement("div", {
-    className: "text-sm font-medium text-gray-700 mb-2 mt-6"
-  }, range, "-day volume and failure trend"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      height: 220
-    }
-  }, /*#__PURE__*/React.createElement(ResponsiveContainer, {
-    width: "100%",
-    height: "100%"
-  }, /*#__PURE__*/React.createElement(ComposedChart, {
-    data: rangeData,
-    margin: {
-      top: 5,
-      right: 5,
-      bottom: 5,
-      left: 5
-    }
-  }, /*#__PURE__*/React.createElement(CartesianGrid, {
-    strokeDasharray: "3 3",
-    stroke: "#f0f0f0"
-  }), /*#__PURE__*/React.createElement(XAxis, {
-    dataKey: "day",
-    tick: {
-      fontSize: 11
-    }
-  }), /*#__PURE__*/React.createElement(YAxis, {
-    yAxisId: "left",
-    tick: {
-      fontSize: 11
-    }
-  }), /*#__PURE__*/React.createElement(YAxis, {
-    yAxisId: "right",
-    orientation: "right",
-    tick: {
-      fontSize: 11
-    },
-    domain: [0, 40],
-    unit: "%"
-  }), /*#__PURE__*/React.createElement(Tooltip, {
-    contentStyle: {
-      fontSize: 12
-    }
-  }), /*#__PURE__*/React.createElement(Bar, {
-    yAxisId: "left",
-    dataKey: "pairs",
-    fill: "#3b82f6",
-    opacity: 0.3,
-    name: "Pairs"
-  }), /*#__PURE__*/React.createElement(Bar, {
-    yAxisId: "left",
-    dataKey: "shipped",
-    fill: "#10b981",
-    opacity: 0.5,
-    name: "Shipped"
-  }), /*#__PURE__*/React.createElement(Bar, {
-    yAxisId: "left",
-    dataKey: "failed",
-    fill: "#ef4444",
-    name: "Failed"
-  }), /*#__PURE__*/React.createElement(Line, {
-    yAxisId: "right",
-    type: "monotone",
-    dataKey: "failPct",
-    stroke: "#dc2626",
-    strokeWidth: 2,
-    dot: {
-      r: 3
-    },
-    name: "Fail %"
-  }))))), tab === "trends" && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    className: "text-sm font-medium text-gray-700 mb-1"
-  }, "Bottleneck #1: P3 Batch release wait (median hrs)"), /*#__PURE__*/React.createElement("div", {
-    className: "text-xs text-gray-400 mb-2"
-  }, "Should be under 20 hrs. Spikes indicate scheduling or cutoff issues."), /*#__PURE__*/React.createElement("div", {
-    style: {
-      height: 200
-    }
-  }, /*#__PURE__*/React.createElement(ResponsiveContainer, {
-    width: "100%",
-    height: "100%"
-  }, /*#__PURE__*/React.createElement(ComposedChart, {
-    data: TREND_DATA,
-    margin: {
-      top: 5,
-      right: 5,
-      bottom: 5,
-      left: 5
-    }
-  }, /*#__PURE__*/React.createElement(CartesianGrid, {
-    strokeDasharray: "3 3",
-    stroke: "#f0f0f0"
-  }), /*#__PURE__*/React.createElement(XAxis, {
-    dataKey: "day",
-    tick: {
-      fontSize: 10
-    }
-  }), /*#__PURE__*/React.createElement(YAxis, {
-    tick: {
-      fontSize: 11
-    },
-    domain: [0, 60],
-    unit: "h"
-  }), /*#__PURE__*/React.createElement(Tooltip, {
-    contentStyle: {
-      fontSize: 12
-    }
-  }), /*#__PURE__*/React.createElement(Area, {
-    type: "monotone",
-    dataKey: "p3Hrs",
-    fill: "#fef2f2",
-    stroke: "#ef4444",
-    strokeWidth: 2,
-    name: "P3 Batch release (hrs)",
-    dot: {
-      r: 3,
-      fill: "#ef4444"
-    }
-  })))), /*#__PURE__*/React.createElement("div", {
-    className: "text-sm font-medium text-gray-700 mb-1 mt-5"
-  }, "Bottleneck #2: C2 GN propagation (median hrs)"), /*#__PURE__*/React.createElement("div", {
-    className: "text-xs text-gray-400 mb-2"
-  }, "Should be under 2 hrs. Rising trend indicates platform slowdown."), /*#__PURE__*/React.createElement("div", {
-    style: {
-      height: 200
-    }
-  }, /*#__PURE__*/React.createElement(ResponsiveContainer, {
-    width: "100%",
-    height: "100%"
-  }, /*#__PURE__*/React.createElement(ComposedChart, {
-    data: TREND_DATA,
-    margin: {
-      top: 5,
-      right: 5,
-      bottom: 5,
-      left: 5
-    }
-  }, /*#__PURE__*/React.createElement(CartesianGrid, {
-    strokeDasharray: "3 3",
-    stroke: "#f0f0f0"
-  }), /*#__PURE__*/React.createElement(XAxis, {
-    dataKey: "day",
-    tick: {
-      fontSize: 10
-    }
-  }), /*#__PURE__*/React.createElement(YAxis, {
-    tick: {
-      fontSize: 11
-    },
-    domain: [0, 6],
-    unit: "h"
-  }), /*#__PURE__*/React.createElement(Tooltip, {
-    contentStyle: {
-      fontSize: 12
-    }
-  }), /*#__PURE__*/React.createElement(Area, {
-    type: "monotone",
-    dataKey: "c2Hrs",
-    fill: "#fef9c3",
-    stroke: "#d97706",
-    strokeWidth: 2,
-    name: "C2 GN propagation (hrs)",
-    dot: {
-      r: 3,
-      fill: "#d97706"
-    }
-  })))), /*#__PURE__*/React.createElement("div", {
-    className: "text-sm font-medium text-gray-700 mb-1 mt-5"
-  }, "End-to-end median (hrs)"), /*#__PURE__*/React.createElement("div", {
-    className: "text-xs text-gray-400 mb-2"
-  }, "Total time from C1 order creation to P8 shipped. Downward trend = improvement."), /*#__PURE__*/React.createElement("div", {
-    style: {
-      height: 200
-    }
-  }, /*#__PURE__*/React.createElement(ResponsiveContainer, {
-    width: "100%",
-    height: "100%"
-  }, /*#__PURE__*/React.createElement(ComposedChart, {
-    data: TREND_DATA,
-    margin: {
-      top: 5,
-      right: 5,
-      bottom: 5,
-      left: 5
-    }
-  }, /*#__PURE__*/React.createElement(CartesianGrid, {
-    strokeDasharray: "3 3",
-    stroke: "#f0f0f0"
-  }), /*#__PURE__*/React.createElement(XAxis, {
-    dataKey: "day",
-    tick: {
-      fontSize: 10
-    }
-  }), /*#__PURE__*/React.createElement(YAxis, {
-    tick: {
-      fontSize: 11
-    },
-    domain: [0, 130],
-    unit: "h"
-  }), /*#__PURE__*/React.createElement(Tooltip, {
-    contentStyle: {
-      fontSize: 12
-    }
-  }), /*#__PURE__*/React.createElement(Area, {
-    type: "monotone",
-    dataKey: "e2eHrs",
-    fill: "#eff6ff",
-    stroke: "#3b82f6",
-    strokeWidth: 2,
-    name: "E2E median (hrs)",
-    dot: {
-      r: 3,
-      fill: "#3b82f6"
-    }
-  }))))), tab === "facilities" && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    className: "text-sm font-medium text-gray-700 mb-1"
-  }, "Facility heatmap: median hours per stage"), /*#__PURE__*/React.createElement("div", {
-    className: "text-xs text-gray-400 mb-3"
-  }, "Red = slowest stage per facility. Sorted by volume."), /*#__PURE__*/React.createElement("div", {
-    className: "overflow-x-auto"
-  }, /*#__PURE__*/React.createElement("table", {
-    className: "w-full text-xs"
-  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
-    className: "border-b border-gray-200"
-  }, /*#__PURE__*/React.createElement("th", {
-    className: "text-left py-2 px-2 text-gray-500 font-medium"
-  }, "Facility"), /*#__PURE__*/React.createElement("th", {
-    className: "text-right py-2 px-2 text-gray-500 font-medium"
-  }, "Orders"), /*#__PURE__*/React.createElement("th", {
-    className: "text-right py-2 px-2 text-gray-500 font-medium"
-  }, "Create\u2192Deleg", /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] font-normal text-gray-400"
-  }, "C1\u2192P1")), /*#__PURE__*/React.createElement("th", {
-    className: "text-right py-2 px-2 text-gray-500 font-medium"
-  }, "Deleg\u2192Batch", /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] font-normal text-gray-400"
-  }, "P1\u2192P3")), /*#__PURE__*/React.createElement("th", {
-    className: "text-right py-2 px-2 text-gray-500 font-medium"
-  }, "Batch\u2192Print", /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] font-normal text-gray-400"
-  }, "P3\u2192P5")), /*#__PURE__*/React.createElement("th", {
-    className: "text-right py-2 px-2 text-gray-500 font-medium"
-  }, "Print\u2192Ship", /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] font-normal text-gray-400"
-  }, "P5\u2192P8")), /*#__PURE__*/React.createElement("th", {
-    className: "text-right py-2 px-2 text-gray-500 font-medium"
-  }, "E2E"), /*#__PURE__*/React.createElement("th", {
-    className: "text-right py-2 px-2 text-gray-500 font-medium"
-  }, "Fail%"))), /*#__PURE__*/React.createElement("tbody", null, FACILITY_DATA.map((r, i) => {
-    const maxStage = Math.max(r.c2d, r.db, Math.abs(r.bp), r.ps);
-    const failPct = (r.fail / r.ord * 100).toFixed(1);
-    return /*#__PURE__*/React.createElement("tr", {
-      key: i,
-      className: `border-b border-gray-100 ${i % 2 === 0 ? "" : "bg-gray-50/50"}`
-    }, /*#__PURE__*/React.createElement("td", {
-      className: "py-1.5 px-2 font-medium text-gray-800"
-    }, r.f, " ", r.v !== "ws" && /*#__PURE__*/React.createElement("span", {
-      className: "text-gray-400 font-normal"
-    }, "(", r.v, ")")), /*#__PURE__*/React.createElement("td", {
-      className: "text-right py-1.5 px-2 text-gray-600"
-    }, r.ord.toLocaleString()), /*#__PURE__*/React.createElement("td", {
-      className: `text-right py-1.5 px-2 ${r.c2d === maxStage && maxStage > 5 ? "text-red-600 font-medium" : heatColor(r.c2d, 20)}`
-    }, r.c2d, "h"), /*#__PURE__*/React.createElement("td", {
-      className: `text-right py-1.5 px-2 ${r.db === maxStage && maxStage > 5 ? "text-red-600 font-medium" : heatColor(r.db, 35)}`
-    }, r.db, "h"), /*#__PURE__*/React.createElement("td", {
-      className: `text-right py-1.5 px-2 ${Math.abs(r.bp) === maxStage && maxStage > 5 ? "text-red-600 font-medium" : heatColor(r.bp, 50)}`
-    }, r.bp, "h"), /*#__PURE__*/React.createElement("td", {
-      className: `text-right py-1.5 px-2 ${heatColor(r.ps, 2)}`
-    }, r.ps, "h"), /*#__PURE__*/React.createElement("td", {
-      className: `text-right py-1.5 px-2 ${heatColor(r.e2e, 100)}`
-    }, r.e2e, "h"), /*#__PURE__*/React.createElement("td", {
-      className: `text-right py-1.5 px-2 ${parseFloat(failPct) > 15 ? "text-red-600 font-medium" : parseFloat(failPct) > 5 ? "text-amber-600" : "text-green-600"}`
-    }, failPct, "%"));
-  })))), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-gray-400 mt-2"
-  }, "* Negative batch\u2192print values indicate timestamp ordering issues"), /*#__PURE__*/React.createElement("div", {
-    className: "text-sm font-medium text-gray-700 mb-2 mt-6"
-  }, "Failure rate by facility (last ", range, " days)"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      height: Math.max(200, FACILITY_DATA.length * 24)
-    }
-  }, /*#__PURE__*/React.createElement(ResponsiveContainer, {
-    width: "100%",
-    height: "100%"
-  }, /*#__PURE__*/React.createElement(BarChart, {
-    data: FACILITY_DATA.map(r => ({
-      ...r,
-      failPct: Math.round(r.fail / r.ord * 100 * 10) / 10
-    })).sort((a, b) => b.failPct - a.failPct),
-    layout: "vertical",
-    margin: {
-      top: 5,
-      right: 40,
-      bottom: 5,
-      left: 55
-    }
-  }, /*#__PURE__*/React.createElement(CartesianGrid, {
-    strokeDasharray: "3 3",
-    stroke: "#f0f0f0"
-  }), /*#__PURE__*/React.createElement(XAxis, {
-    type: "number",
-    tick: {
-      fontSize: 10
-    },
-    unit: "%",
-    domain: [0, 35]
-  }), /*#__PURE__*/React.createElement(YAxis, {
-    type: "category",
-    dataKey: "f",
-    tick: {
-      fontSize: 10
-    },
-    width: 50
-  }), /*#__PURE__*/React.createElement(Tooltip, {
-    contentStyle: {
-      fontSize: 12
-    }
-  }), /*#__PURE__*/React.createElement(Bar, {
-    dataKey: "failPct",
-    name: "Fail %",
-    fill: "#ef4444",
-    radius: [0, 3, 3, 0]
-  }))))), tab === "failures" && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    className: "text-sm font-medium text-gray-700 mb-1"
-  }, "Failure hotspots: top 10 by failed orders"), /*#__PURE__*/React.createElement("div", {
-    className: "text-xs text-gray-400 mb-3"
-  }, "Which stages and facilities accumulate the most failures."), /*#__PURE__*/React.createElement("table", {
-    className: "w-full text-xs"
-  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
-    className: "border-b border-gray-200"
-  }, /*#__PURE__*/React.createElement("th", {
-    className: "text-left py-2 px-2 text-gray-500 font-medium"
-  }, "Failed at stage"), /*#__PURE__*/React.createElement("th", {
-    className: "text-left py-2 px-2 text-gray-500 font-medium"
-  }, "Facility"), /*#__PURE__*/React.createElement("th", {
-    className: "text-right py-2 px-2 text-gray-500 font-medium"
-  }, "Failed orders"), /*#__PURE__*/React.createElement("th", {
-    className: "text-right py-2 px-2 text-gray-500 font-medium"
-  }, "Median time to fail"))), /*#__PURE__*/React.createElement("tbody", null, FAIL_DATA.map((r, i) => /*#__PURE__*/React.createElement("tr", {
-    key: i,
-    className: `border-b border-gray-100 ${i % 2 === 0 ? "" : "bg-gray-50/50"}`
-  }, /*#__PURE__*/React.createElement("td", {
-    className: "py-1.5 px-2 text-gray-700"
-  }, r.stage), /*#__PURE__*/React.createElement("td", {
-    className: "py-1.5 px-2 font-medium text-gray-800"
-  }, r.facility), /*#__PURE__*/React.createElement("td", {
-    className: `text-right py-1.5 px-2 ${r.count > 100 ? "text-red-600 font-medium" : r.count > 20 ? "text-amber-600" : "text-gray-600"}`
-  }, r.count), /*#__PURE__*/React.createElement("td", {
-    className: `text-right py-1.5 px-2 ${r.hrs > 50 ? "text-red-600" : r.hrs < 5 ? "text-green-600" : "text-gray-600"}`
-  }, r.hrs, " hrs"))))), /*#__PURE__*/React.createElement("div", {
-    className: "text-sm font-medium text-gray-700 mb-2 mt-6"
-  }, "Daily failure count trend"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      height: 200
-    }
-  }, /*#__PURE__*/React.createElement(ResponsiveContainer, {
-    width: "100%",
-    height: "100%"
-  }, /*#__PURE__*/React.createElement(ComposedChart, {
-    data: TREND_DATA,
-    margin: {
-      top: 5,
-      right: 5,
-      bottom: 5,
-      left: 5
-    }
-  }, /*#__PURE__*/React.createElement(CartesianGrid, {
-    strokeDasharray: "3 3",
-    stroke: "#f0f0f0"
-  }), /*#__PURE__*/React.createElement(XAxis, {
-    dataKey: "day",
-    tick: {
-      fontSize: 10
-    }
-  }), /*#__PURE__*/React.createElement(YAxis, {
-    yAxisId: "left",
-    tick: {
-      fontSize: 11
-    }
-  }), /*#__PURE__*/React.createElement(YAxis, {
-    yAxisId: "right",
-    orientation: "right",
-    tick: {
-      fontSize: 11
-    }
-  }), /*#__PURE__*/React.createElement(Tooltip, {
-    contentStyle: {
-      fontSize: 12
-    }
-  }), /*#__PURE__*/React.createElement(Bar, {
-    yAxisId: "left",
-    dataKey: "failed",
-    fill: "#fca5a5",
-    name: "Failed"
-  }), /*#__PURE__*/React.createElement(Bar, {
-    yAxisId: "left",
-    dataKey: "sla",
-    fill: "#fbbf24",
-    name: "SLA breached"
-  }), /*#__PURE__*/React.createElement(Line, {
-    yAxisId: "right",
-    type: "monotone",
-    dataKey: "failPct",
-    stroke: "#dc2626",
-    strokeWidth: 2,
-    dot: {
-      r: 3
-    },
-    name: "Fail %"
-  })))), /*#__PURE__*/React.createElement("div", {
-    className: "bg-red-50 border border-red-200 rounded-lg p-3 mt-4"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-xs font-medium text-red-800 mb-1"
-  }, "Top action items"), /*#__PURE__*/React.createElement("div", {
-    className: "text-xs text-red-700 space-y-1"
-  }, /*#__PURE__*/React.createElement("div", null, "1. SE_INK: 176 failures after P2 (deleg order in GN) - investigate workflow_service routing"), /*#__PURE__*/React.createElement("div", null, "2. US_ANS: 157 failures at same stage - similar root cause?"), /*#__PURE__*/React.createElement("div", null, "3. AU_CMP: 26 failures after P4 (partner plate) - plate quality or config issue"), /*#__PURE__*/React.createElement("div", null, "4. SE_INK: negative batch\u2192print timing needs timestamp investigation")))), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-gray-400 mt-6 pt-3 border-t border-gray-100"
-  }, "Source: gelato-data-warehouse.gelato_schema.fct_connect_delegation_transition | 42 columns | Numbering per DBI-5233"));
-}
-try {
-  ReactDOM.render(/*#__PURE__*/React.createElement(App, null), document.getElementById("root"));
-} catch (e) {
-  document.getElementById("root").innerHTML = '<div style="color:red;padding:20px;">Render error: ' + e.message + '</div>';
-}
+function cp(b,i){var t=FL[i].ids;try{if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t).then(function(){ok(b)}).catch(function(){fb(t,b)})}else{fb(t,b)}}catch(e){fb(t,b)}}
+function fb(t,b){try{var a=document.createElement("textarea");a.value=t;a.style.cssText="position:fixed;left:-9999px;top:-9999px";document.body.appendChild(a);a.focus();a.select();var r=document.execCommand("copy");document.body.removeChild(a);if(r){ok(b)}else{window.prompt("Copy order IDs:",t)}}catch(e){window.prompt("Copy order IDs:",t)}}
+function ok(b){b.textContent="\u2713 copied";b.classList.add("ok");setTimeout(function(){b.textContent="\uD83D\uDCCB";b.classList.remove("ok")},2000)}
+go();
 </script>
 </body>
 </html>
